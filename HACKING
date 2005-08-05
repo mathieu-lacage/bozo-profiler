@@ -1,0 +1,63 @@
+If you are interested in knowing how this code works and how you might tweak 
+it, this file is for you.
+
+
+Coding Style
+------------
+
+The coding style generally follows the Nautilus coding style. I don't
+really believe that this coding style is the best thing since sliced bread 
+but:
+	- I know it quite well
+	- It is reasonably documented
+which makes it an ideal candidate for code I write.
+
+You can find a thoroughful description of this coding style in:
+http://cvs.gnome.org/viewcvs/*checkout*/nautilus/docs/style-guide.html?rev=1.8
+This document was obviously written by Darin Adler, the best thing which ever
+happened to programmers since sliced bread.
+
+Design
+------
+
+I am sure that the style used to design the APIs is quite alien to a lot
+of people. It will probably help you to understand the APIs if you know
+what design considerations have driven my API choices:
+
+	1) memory allocations (malloc/free) are considered evil and are
+	avoided as much as possible. A perfect API does not mandate
+	a specific memory allocation policy. A perfect API allows you
+	to allocate all your memory on the stack but does not mandate you
+	to do so.
+
+	2) no one cares about speed.
+
+	3) the code tries to be easy to understand. For example, I never 
+	use the classic ()?():() C idiom because I believe you should not
+	really need to know C to read the code. 
+
+Specifications
+--------------
+
+If you want to read the elf32 and dwarf2 parser code, you definitely 
+want to read the associated specifications:
+
+Generally, the following page should point to the most interesting
+specifications: http://www.linuxbase.org/spec/refspecs/
+
+
+The Grand Idea
+--------------
+
+One of my long-term goal is to build an event-generation in-process
+library which can notify arbitrary code of interesting system-level 
+events such as:
+	- thread creation/destruction/start
+	- library loading
+	- thread scheduling ?
+	- lock contention ?
+	- system calls ?
+	
+Some code which demonstrates that some of these ideas are possible is
+located in test/. 
+

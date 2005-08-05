@@ -1,0 +1,57 @@
+# read data in data frame
+out <- read.table ("~/out")
+# plot with linear scale
+> plot (out)
+# plot with logscale for x and y axis.
+> plot (out, log="xy")
+# get rid of plot window.
+> dev.off ()
+null device 
+          1 
+# load non-linear library.
+> library(nlme)
+
+# read data again in data frame but specify frame names because the
+# data file does not contain any frame header (i.e., column names)
+> out <- read.table (file="~/out", col.names = c("x", "y"))
+# perform non-linear least-square regression with y = ax^-b model
+# start values are a=1,b=1
+> gnls (y ~ a * x ^ (-b), data = out, start = list (a = 1, b = 1))
+Generalized nonlinear least squares fit
+  Model: y ~ a * x^(-b) 
+  Data: out 
+  Log-likelihood: 1504.815
+
+Coefficients:
+        a         b 
+0.1264918 0.9298527 
+
+Degrees of freedom: 333 total; 331 residual
+Residual standard error: 0.002645511 
+# store regression result in variable.
+> result <- gnls (y ~ a * x ^ (-b), data = out, start = list (a = 1, b = 1))
+# look at residual plot.
+> plot (result, log="xy")
+# print only the regression coefficient result.
+> print (coef (result))
+        a         b 
+0.1264918 0.9298527 
+# access to b only.
+> print (coef (result)[[2]])
+[1] 0.9298527
+# define the model function range.
+> x <- seq (0, 1000000)
+# define the model function values.
+> y <- (coef (result)[1] * x ^ (-coef (result)[2]))
+# plot model function
+> plot (y~x, log="xy")
+Warning message: 
+1 x value <= 0 omitted from logarithmic plot in: xy.coords(x, y, xlabel, ylabel, log) 
+> dev.off ()
+null device 
+          1 
+# plot data with logscales for x and y axis.
+> plot (out, log="xy")
+# super-impose model function on top of data graph.
+> lines (y~x)
+

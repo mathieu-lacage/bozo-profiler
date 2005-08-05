@@ -1,0 +1,3 @@
+There is a type named "sig_atomic_t" for which the system guarantees
+that a read is atomic. This is not guaranteed for smaller or bigger
+types.

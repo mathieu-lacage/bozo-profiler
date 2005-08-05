@@ -1,0 +1,5 @@
+* add dump of cwd in profiler and parsing of it in read-dump to avoid
+  having to always use the same dir when running the program and dumping
+  data.
+* add API to enable and disable the profiler from the main program.
+* add code to dump the CPU's clock in each record

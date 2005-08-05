@@ -1,0 +1,70 @@
+		The Bozo Profiler 1.0
+		---------------------
+
+This code is Copyright Mathieu Lacage and INRIA: I wrote part
+of it at home and part of it at work (INRIA). Some parts
+(most notably, the elf32 parser and the memory-reader) were
+heavily inspired from older code I had written in 2002
+at home. The current codebase is entirely distributed under 
+the GPL version 2. 
+
+  The Name
+  --------
+
+Well, that profiler has a really sucky name. The name was picked
+in about 10 seconds because I needed to put a name on a piece of
+paper.
+
+  Build
+  -----
+
+It should build out of the box with an invocation to "make". The
+Makefile probably depends on GNU make. This generates a library
+bin/libprofiler/libprofiler.so and a binary bin/read-dump/read-dump.
+
+You can install the libprofiler.so library wherever you want.
+
+  Building your code
+  ------------------
+
+The application code you want to profile should be built with:
+CFLAGS=-finstrument-functions -gdwarf-2
+LDFLAGS=-lprofiler
+
+
+  Running the code you built
+  --------------------------
+
+When you run your code, your program will generate a set of files
+whose name follows the pattern BIN-XXX.func-dump. BIN is the name
+of the executable of your program. XXX is a unique ID for each of 
+the threads in your program. If your program forks, you will
+also find a dump file for each of the threads of the forked
+program.
+
+  Reading the Dumps
+  -----------------
+
+Once the dump files are generated, you can observe their content
+with the read-dump utility. This program should be run in the _exact_
+same current directory used to run your program. Its first argument
+on the command-line is a filename for a dump file. This program
+will output on its standard output a human-readable description
+of the program events.
+
+The dump utility has two modes: 
+* --output-mat: output data in an adhoc format.
+* --output-dot: output data in a format usable by the 
+  graphiz utility.
+* --output-all-dot: output verbose data in dot format. 
+  I strongly recommend the use of this option.
+  
+
+Example:
+./read-dump/read-dump --output-all-dot < test/test-profiler-32478.func-dump > test.dot
+
+And then, output the call graph in a png file (this can be _very_ 
+long if the dot file is big):
+dot -Tpng -o test.png test.dot
+
+

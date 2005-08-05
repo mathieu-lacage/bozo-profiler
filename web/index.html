@@ -1,0 +1,64 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+  <head>
+    <title>The Bozo Profiler</title>
+  </head>
+
+  <body>
+    <h1>The Bozo Profiler</h1>
+
+    <h2>What it can do for you</h2>
+
+    <p>This profiler can be used to get a dump of the runtime call graph of any program
+    for which you have the source code. It requires a complete recompilation of your code
+    and generates a set of binary dump files which represent the program call graph.
+    Right now, this profiler has been successfully used with various applications 
+    such as: nautilus, mozilla, open office, eog, and gimp.
+    </p>
+
+    <p>These binary dumps can then be converted to human-readable text files. For now,
+    the most interesting output file format you can select is the so-called <i>dot</i>
+    format which can be used as input to the 
+    <a href="http://www.graphviz.org/">graphviz</a> package to generate nice-looking
+    pdf org png representations of the call graphs.</p>
+
+    <h2>How do you get the code ?</h2>
+
+    <p>You can get the code under the GPLv2 from the following 
+    <a href="http://abridgegame.org/darcs/">darcs</a> repository:
+    <a href="http://le-hacker.org/darcs/bozo-profiler">http://le-hacker.org/darcs/bozo-profiler</a>.
+    The bandwidth there is a bit limited so, please, be careful.</p>
+
+    <p>If you want to download the source code without using darcs, you can use wget:
+    <pre>
+     wget -r http://le-hacker.org/darcs/bozo-profiler
+    </pre>
+    A tarball is also available from <a href="bozo-profiler-1.1.tar.gz">here</a>.
+    </p>
+
+    <h2>An example use</h2>
+
+    <p>I did run Nautilus with this profiler and here is a small dump extract of its output in
+    <a href="out.dot">dot</a> format (graphiz) and <a href="out.png">png</a> (beware, some browsers
+    crash when trying to access this <i>large</i> image so, consider downloading the image rather
+    than view it online).
+    </p>
+
+    <p>This rather complex graph can be simplified by grouping function calls by module as shown
+    in this <a href="nautilus.png">picture</a>. It is possible to add 
+    <a href="nautilus-labels.png">labels</a> which indicate how many
+    times each module called another module. You can also add a logarithmic scale for line widths
+    to reflect the number of times a module calls another module as shown in this 
+    <a href="nautilus-width-log.png">image</a> (this <a href="nautilus-width.png">image</a> shows
+    what happens if you use a linear scale). For reference, this data was generated from
+    <a href="nautilus-extract.log">this</a> raw text log file (this is only an extract of the file
+    since the full log file is close to 99MBytes big).</p>
+
+    <hr>
+    <address><a href="mailto:lacage@sophia.inria.fr">Mathieu Lacage</a></address>
+<!-- Created: Tue Mar 23 10:27:38 MET 2004 -->
+<!-- hhmts start -->
+Last modified: Wed Mar 24 16:48:18 MET 2004
+<!-- hhmts end -->
+  </body>
+</html>

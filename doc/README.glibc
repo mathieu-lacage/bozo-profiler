@@ -1,0 +1,23 @@
+Build it:
+
+1) download distribution rpm
+2) rpmbuild -bp /usr/src/redhat/SPEC/glibc.spec
+3) SRC=/usr/src/redhat/BUILD/glibc-XXX
+3) mkdir $SRC/objdir
+4) cd $SRC/objdir
+5) CFLAGS="-march=i386 -DNDEBUG=1 -gdwarf-2 -O3" ../configure --enable-add-ons=nptl --without-cvs --enable-bind-now   --with-tls  --prefix=$SRC/build
+6) make -C $SRC/objdir install
+6) touch $SRC/build/etc/ld.so.conf
+7) cp -La /lib/modules/`uname -r`/build/include/{linux/,asm/,asm-generic/} $SRC/build/include/
+8) cp `gcc --print-file-name=libgcc_s.so.1` $SRC/build/lib
+
+
+Link against it:
+
+FLAGS=-B$SRC/build -B$SRC/build/lib
+LDFLAGS=$FLAGS -Wl,-rpath,$SRC/build/lib,-dynamic-linker,$SRC/build/lib/ld-linux.so.2 -L$SRC/build/lib -lc
+CFLAGS=$FLAGS
+
+
+Interesting things:
+http://www.bitwagon.com/glibc-audit/glibc-audit.html

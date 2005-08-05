@@ -1,0 +1,94 @@
+Q: How do I build Gnome applications with these options ?
+A: I use jhbuild (http://www.jamesh.id.au/software/jhbuild/). 
+   I added the following settings to my .jhbuildrc:
+
+os.environ['CFLAGS'] = '-gdwarf-2 -finstrument-functions'
+os.environ['LDFLAGS'] = '-Wl,-rpath,/user/mlacage/home/bin -L/user/mlacage/home/bin -lprofiler'
+
+------------------------------------------------------------------
+Q: How do I run Gnome applications with the profiler ?
+A: GNOME_DISABLE_CRASH_DIALOG=1 ./application
+
+------------------------------------------------------------------
+Q: How do I build Mozilla with these options ?
+A: I use jhbuild too. See previous QA.
+
+------------------------------------------------------------------
+Q: When I use jhbuild, some modules fail with a bunch of errors
+   related to the nss.h header.
+A: 1) make sure that the mozilla module has been built.
+   2) make sure you install by hand the nss library headers:
+      cp -r cvs/mozilla/dist/public/nss gnome2/include/mozilla-1.7.6
+
+
+------------------------------------------------------------------
+Q: How do I build Open Office with these options ?
+A: This is clearly a bit more complicated. I decided to use ooo-build.
+   (see http://ooo.ximian.com/ooo-build.html).
+   - be uber-careful about the location of the java and ant 
+     installations you want to use during the oo build if you multiple
+     versions of java and/or ant.
+     Specifically, I modified ooo-build/distro-configs/NLD.conf to 
+     include the following which describe the version of java and the
+     version of ant I want to use
+--with-ant-home=/opt/java
+--with-jdk-home=/opt/java
+   - build a GTK+/glib stack with jhbuild first
+   - move into the jhbuild environment with the command
+"jhbuild shell"
+   - run the "./download" command in the ooo-build directory.
+   - configure ooo-build with:
+"./configure --prefix=$HOME/oo --disable-kde"
+   - edit solenv/bin/deliver.pl and comment the following line:
+$strip = 'strip' if (($ENV{COM} ne 'MSC') && (((defined $ENV{ENABLE_SYMBOLS}) && ($ENV{ENABLE_SYMBOLS} ne "TRUE") && ($ENV{ENABLE_SYMBOLS} ne "SMALL")) || (!defined $ENV{ENABLE_SYMBOLS})));
+   - edit sal/osl/unx/signal.c: comment out the line:
+{ SIGTRAP,   ACT_ABORT,  NULL },    /* trace trap (not reset when caught) */
+   - edit ooo-build/build/src680-m78/solenv/inc/unxlngi4.mk. Add this
+     at the end of the file:
+.IF "$(DISABLE_BOZO)"=="YES"
+.ELSE
+CFLAGSCC+= -gdwarf-2 -finstrument-functions
+CFLAGSCXX+= -gdwarf-2 -finstrument-functions
+LINKFLAGS+= -Wl,-rpath,/user/mlacage/home/bin -L/user/mlacage/home/bin -lprofiler
+.ENDIF
+   - add flags to stlport module. (edit stlport/unxlngi4.pro/misc/build/STLport-4.5/src/gcc-3.0.mak):
+CXXFLAGS_COMMON += -gdwarf-2 -finstrument-functions
+DYN_LINK=$(CXX) -Wl,-rpath,/user/mlacage/home/bin -L/user/mlacage/home/bin -lprofiler --fexceptions -shared -o
+   - add flags to icu module: edit icu/makefile.mk:
+CONFIGURE_ACTION=sh -c 'CFLAGS="-gdwarf-2 -finstrument-functions -O" CXXFLAGS=$CFLAGS LDFLAGS="-Wl,-rpath,/user/mlacage/home/bin -L/user/mlacage/home/bin -lprofiler" ./configure --enable-layout --enable-static --enable-shared=yes --enable-64bit-libs=no --enable-extras=no'
+
+   - if you try to build a recent version of oo, you might need to apply a few patches.
+     specifically:
+       * apply in src680-m78/slideshow directory: 
+         http://people.redhat.com/caolanm/slideshow/thefix
+
+   - If you are lucky enough to complete a full build, you need to install it: disable
+     stripping from the install scripts by applying the following patch:
+     from the file src680-m78/solenv/bin/modules/installer/strip.pm
+-    my $systemcall = "strip" . " " . $filename;
++    my $systemcall = "true";
+
+
+
+   The hard part comes from the fact that unless you want to use 100GB 
+   of HD space and you have a few days to wait, you need to build 
+   specific tools used during the oo build without the magic options.
+   Specifically, you want at least the following tools option-free:
+     - autodoc
+     - xml2cmp
+     - codemaker
+     - idl
+     - cpputools
+     - dmake 
+     - soltools
+     - idlc 
+     - registry
+     - transex3
+     - i18pool/source/collator/
+     - i18pool/source/textconversion/
+     - i18pool/source/localedata/
+     - i18pool/source/breakiterator/
+     - sal/typesconfig
+     - all tools in icu.
+
+

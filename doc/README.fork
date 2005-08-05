@@ -1,0 +1,16 @@
+If you do a fork, you must be prepared to use the pthread_atfork function
+which can be used to get notifications from the child for any fork.
+
+Specifically, this is useful because, if you call fork from a threaded program,
+the child forked program will have only ONE thread, the executing thread. The
+other threads are not duplicated even though their address space are duplicated.
+This means that in your child_notification callback, you should perform
+any thread-specific cleanup for the other threads in the parent program.
+
+For my profiler, this means two things:
+1) I must cleanup the data in the manager thread
+2) I must restart the manager thread
+3) I must cleanup the thread buffers
+4) I must re-create the thread buffers.
+
+this whole thing is a bit rather complicated.
