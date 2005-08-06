@@ -116,7 +116,6 @@ enum abbrev_attribute_e {
         ABBREV_ATTR_ABSTRACT_ORIGIN = (1<<4),
         ABBREV_ATTR_SPECIFICATION = (1<<5),
         ABBREV_ATTR_COMP_DIRNAME_OFFSET = (1<<6),
-        ABBREV_ATTR_STMT_LIST = (1<<7),
 };
 
 struct abbrev_attributes {
@@ -557,6 +556,8 @@ read_constant_form (struct dwarf2_lookup_data const *data,
                 retval = reader->read_uleb128 (reader);
                 break;
         default:
+                /* quiet the compiler */
+                retval = 0;
                 printf ("error, invalid form\n");
                 break;
         }

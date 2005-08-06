@@ -221,9 +221,13 @@ read_license_header (struct reader *reader)
                         data_size = reader->read_u16 (reader);
                         printf ("data size: 0x%x\n", data_size);
                 } else {
+                        /* quiet compiler */
+                        data_size = 0;
                         printf ("invalid data 1\n");
                 }
         } else {
+                /* quiet compiler */
+                data_size = 0;
                 printf ("invalid data 2\n");
         }
         reader->set_lsb (reader);
