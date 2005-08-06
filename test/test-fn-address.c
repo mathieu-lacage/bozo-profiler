@@ -22,7 +22,7 @@
 #include <stdio.h>
 
 int 
-main (int argc, char *argv[])
+test_fn_address (int argc, char *argv[])
 {
         if (fn_address_test (fn_address_foo) == -1) {
                 printf ("test failed\n");

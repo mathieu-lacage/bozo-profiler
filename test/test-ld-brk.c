@@ -49,7 +49,8 @@ trap_handler (int signo, siginfo_t *info, ucontext_t *user_ctx)
 }
 
 
-int main (int argc, char *argv[])
+int 
+test_ld_brk (int argc, char *argv[])
 {
         struct sigaction action;
         struct r_debug *r_debug;

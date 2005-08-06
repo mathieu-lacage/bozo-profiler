@@ -13,44 +13,25 @@
   along with this program; if not, write to the Free Software
   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
-  Copyright (C) 2004,2005  INRIA
-  Author: Mathieu Lacage <lacage@sophia.inria.fr>
+  Copyright (C) 2005  Mathieu Lacage
+  Author: Mathieu Lacage <mathieu@gnu.org>
 */
 
-#include "mbool.h"
+#ifndef X86_OPCODE
+#define X86_OPCODE
 
-#include <dlfcn.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <stdio.h>
+#include <stdint.h>
 
+struct x86_opcode_parser {
+        enum {
+                STATE_BYTE0,
+        } state;
+};
 
+void x86_opcode_initialize (struct x86_opcode_parser *parser);
 
-int foo ()
-{
-	return 3;
-}
-
-int
-test_profiler (int argc, char *argv[])
-{
-        void *h;
-        void (*f) (void);
-	int v = foo ();
-
-	h = dlopen ("test/libtest-fn-address.so", RTLD_LAZY);
-
-	printf ("forking\n");
-	//fork ();
-
-	foo ();
-	
-	f = (void (*) (void))dlsym (h, "fn_address_foo");
-
-	(*f) ();
+void x86_opcode_parse (struct x86_opcode_parser *parser, 
+                       uint8_t *buffer, uint32_t size);
 
 
-	while (v > 0) {sleep (1);v--;}
-
-	return v;
-}
+#endif /* X86_OPCODE */

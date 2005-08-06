@@ -21,11 +21,13 @@
 
 #include <stdio.h>
 
+static int g_constructor_ran = 0;
+
 static void my_const (void) __attribute__ ((constructor));
 
 static void my_const (void)
 {
-        printf ("constructor\n");
+        g_constructor_ran = 1;
 }
 
 void fn_address_foo (void)
@@ -37,6 +39,9 @@ int fn_address_test (void(*fn)(void))
         if (fn != fn_address_foo) {
                 printf ("not equal: %p -- %p\n", fn, fn_address_foo);
                 return -1;
+        }
+        if (g_constructor_ran != 1) {
+                printf ("constructor problem.\n");
         }
         //fn_address_foo ();
         printf ("%p\n", fn_address_foo);

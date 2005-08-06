@@ -42,23 +42,23 @@ names_cb (struct elf32_symbol const *symbol, uint64_t address, char const *real_
 }
 
 
-void foo (void) {}
+void test_symbol_foo (void) {}
 
-void bar (void) {}
+void test_symbol_bar (void) {}
 
 #include <sys/types.h>
 #include <unistd.h>
 
 
 int
-main (int argc, char *argv[])
+test_symbol (int argc, char *argv[])
 {
         struct load_map map;
         uint64_t address;
 
         load_map_linux_initialize (&map);
 
-        if (symbol_iterate_definitions (&map, "foo", definitions_cb, &address) == -1) {
+        if (symbol_iterate_definitions (&map, "test_symbol_foo", definitions_cb, &address) == -1) {
                 goto error;
         }
         if (symbol_iterate_names (&map, address, names_cb, NULL) == -1) {

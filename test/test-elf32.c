@@ -29,7 +29,8 @@
 #include "memory-reader.h"
 
 
-int main (int argc, char *argv[])
+int
+test_elf32 (int argc, char *argv[])
 {
         uint8_t *data;
         int fd, status;

@@ -302,7 +302,8 @@ read_ti (struct reader *reader, uint32_t file_size)
         dump_data ("dump.data", reader, saved_offset, data_length);
 }
 
-int main (int argc, char *argv[])
+int 
+test_ti (int argc, char *argv[])
 {
         uint8_t *data;
         int fd;

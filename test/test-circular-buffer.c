@@ -19,7 +19,8 @@
 
 #include "circular-buffer.h"
 
-int main (int argc, char *argv[])
+int 
+test_circular_buffer (int argc, char *argv[])
 {
         circular_buffer_run_test ();
         return 0;

@@ -83,9 +83,10 @@ get_caller_pc (void)
         return p[2];
 }
 
-int foo (void) {return 9;}
+int test_dwarf2_foo (void) {return 9;}
 
-int main (int argc, char *argv[])
+int 
+test_dwarf2 (int argc, char *argv[])
 {
         uint32_t target_address;
         struct memory_reader reader;
@@ -94,8 +95,7 @@ int main (int argc, char *argv[])
         int fd;
         uint8_t *data;
         uint32_t size;
-        //char const *filename = "/proc/self/exe";
-        char const *filename = "bin/test/test-dwarf2";
+        char const *filename = argv[0];
         struct dwarf2_symbol_information symbol;
 
         fd = open (filename, O_RDONLY);
@@ -113,7 +113,7 @@ int main (int argc, char *argv[])
         memory_reader_initialize (&reader, data, size);
         memory_reader_initialize (&abbrev_reader, data, size);
 
-        target_address = (uint32_t) foo;
+        target_address = (uint32_t) test_dwarf2_foo;
         if (dwarf2_lookup (target_address, &symbol, READER (&reader), READER (&abbrev_reader)) == -1) {
                 printf ("error foo\n");
                 goto error;

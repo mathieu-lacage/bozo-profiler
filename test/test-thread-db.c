@@ -377,7 +377,8 @@ static void *thread_cb (void *arg)
         return NULL;
 }
 
-int main (int argc, char *argv[])
+int 
+test_thread_db (int argc, char *argv[])
 {
         pthread_t thread;
         int result;

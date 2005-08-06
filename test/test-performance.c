@@ -62,7 +62,8 @@ double avg_runs (void)
         return total / n;
 }
 
-int main (int argc, char *argv[])
+int 
+test_performance (int argc, char *argv[])
 {
         printf ("ratio: %g\n", avg_runs ());
 

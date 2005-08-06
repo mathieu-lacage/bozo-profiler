@@ -61,7 +61,7 @@ definitions_cb (struct elf32_symbol const *symbol, uint64_t address,
 }
 
 int 
-main (int argc, char *argv[])
+test_breakpoint (int argc, char *argv[])
 {
         struct load_map map;
         struct sigaction action;
