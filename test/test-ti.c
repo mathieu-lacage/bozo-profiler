@@ -24,6 +24,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
 
 #include "memory-reader.h"
 
@@ -33,6 +34,25 @@
         if (got != expected) { \
                 printf ("expected: %u, got: %u\n", expected, got); \
         } \
+}
+
+
+static void
+dump_data (char const *name, 
+           struct reader *reader, 
+           uint32_t start, 
+           uint32_t length)
+{
+        uint32_t i;
+        FILE *file;
+        file = fopen (name, "w");
+        reader->seek (reader, start);
+        for (i = 0; i < length; i++) {
+                uint8_t c;
+                c = reader->read_u8 (reader);
+                fwrite (&c, 1, 1, file);
+        }
+        fclose (file);
 }
 
 
@@ -180,10 +200,9 @@ read_license_header (struct reader *reader)
         VERIFY (reader, 0x0d);
         VERIFY (reader, 0x40);
         // no idea what these bytes represent
-        reader->skip (reader, 0x40);
+        dump_data ("dump.id", reader, reader->get_offset (reader), 0x40);
         c = reader->read_u8 (reader);
         if (c == 0x00) {
-                uint32_t data_size;
                 VERIFY (reader, 0x01);
                 c = reader->read_u8 (reader);
                 if (c == 0x00 || c == 0xff) {
@@ -252,8 +271,9 @@ read_application_header (struct reader *reader)
 
 
 
+
 static void
-read_ti (struct reader *reader)
+read_ti (struct reader *reader, uint32_t file_size)
 {
         uint32_t data_length, application_length;
         uint32_t saved_offset;
@@ -264,8 +284,18 @@ read_ti (struct reader *reader)
         read_application_header (reader);
         reader->seek (reader, saved_offset);
         reader->skip (reader, application_length);
+        VERIFY (reader, 0x02);
+        VERIFY (reader, 0x0d);
+        VERIFY (reader, 0x40);
         saved_offset = reader->get_offset (reader);
-        printf ("off: 0x%x, 0x%x\n", saved_offset, application_length);
+        printf ("off: 0x%x, 0x%x, 0x%x, 0x%x\n", 
+                saved_offset, application_length, 
+                data_length, file_size);
+        dump_data ("dump.signature", reader, saved_offset, 0x40);
+        reader->seek (reader, 0);
+        data_length = read_flash_header (reader);
+        saved_offset = reader->get_offset (reader);
+        dump_data ("dump.data", reader, saved_offset, data_length);
 }
 
 int main (int argc, char *argv[])
@@ -290,7 +320,7 @@ int main (int argc, char *argv[])
 
         memory_reader_initialize (&reader, data, size);
 
-	read_ti (READER (&reader));
+	read_ti (READER (&reader), size);
 
         return 0;
 }
