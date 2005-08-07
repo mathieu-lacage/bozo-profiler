@@ -22,16 +22,49 @@
 
 #include <stdint.h>
 
-struct x86_opcode_parser {
-        enum {
-                STATE_BYTE0,
-        } state;
+enum x86_mode_e {
+        X86_MODE_16,
+        X86_MODE_32
 };
 
-void x86_opcode_initialize (struct x86_opcode_parser *parser);
+struct x86_opcode_parser {
+        enum x86_state_e {
+                X86_STATE_PREFIX_OR_OPCODE0,
+                X86_STATE_OPCODE1,
+                X86_STATE_MODRM,
+                X86_STATE_SIB,
+                X86_STATE_DISPLACEMENT,
+                X86_STATE_IMMEDIATE,
+                X86_STATE_OPERAND,
+                X86_STATE_ERROR
+        } state;
+        enum x86_prefixes_e {
+                X86_PREFIX_LOCK   = (1<<0),
+                X86_PREFIX_REPNEZ = (1<<1),
+                X86_PREFIX_REPEZ  = (1<<2),
+                X86_PREFIX_CS     = (1<<3),
+                X86_PREFIX_SS     = (1<<4),
+                X86_PREFIX_DS     = (1<<5),
+                X86_PREFIX_ES     = (1<<6),
+                X86_PREFIX_FS     = (1<<7),
+                X86_PREFIX_GS     = (1<<8),
+                X86_PREFIX_BRANCH_TAKEN     = (1<<9),
+                X86_PREFIX_BRANCH_NOT_TAKEN = (1<<10),
+                X86_PREFIX_OP_SIZE = (1<<11),
+                X86_PREFIX_AD_SIZE = (1<<12)
+        } prefixes;
+        uint8_t opcode0;
+        uint8_t opcode1;
+        uint8_t displacement;
+        enum x86_mode_e mode;
+};
 
-void x86_opcode_parse (struct x86_opcode_parser *parser, 
-                       uint8_t *buffer, uint32_t size);
+void x86_opcode_initialize (struct x86_opcode_parser *parser, enum x86_mode_e);
+
+/* returns now many bytes were read.
+ */
+uint32_t x86_opcode_parse (struct x86_opcode_parser *parser, 
+                           uint8_t *buffer, uint32_t size);
 
 
 #endif /* X86_OPCODE */

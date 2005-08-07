@@ -74,7 +74,7 @@ test_opcode (int argc, char *argv[])
         text_buffer = data + header.sh_offset;
         text_size = header.sh_size;
 
-        x86_opcode_initialize (&parser);
+        x86_opcode_initialize (&parser, X86_MODE_32);
 
         x86_opcode_parse (&parser, text_buffer, text_size);
 
