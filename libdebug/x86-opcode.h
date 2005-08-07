@@ -35,7 +35,6 @@ struct x86_opcode_parser {
                 X86_STATE_SIB,
                 X86_STATE_DISPLACEMENT,
                 X86_STATE_IMMEDIATE,
-                X86_STATE_OPERAND,
                 X86_STATE_ERROR
         } state;
         enum x86_prefixes_e {
@@ -56,6 +55,7 @@ struct x86_opcode_parser {
         uint8_t opcode0;
         uint8_t opcode1;
         uint8_t displacement;
+        uint8_t immediate;
         enum x86_mode_e mode;
 };
 

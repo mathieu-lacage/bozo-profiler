@@ -39,13 +39,18 @@ state_to_string (enum x86_state_e state)
                 FOO (SIB);
                 FOO (DISPLACEMENT);
                 FOO (IMMEDIATE);
-                FOO (OPERAND);
                 FOO (ERROR);
         }
 #undef FOO
         assert (0);
         return "0xdeadbeaf";
 }
+
+enum x86_data_type {
+        X86_DATA_NONE,
+        X86_DATA_BYTE,
+        X86_DATA_WORD
+};
 
 /* Calculates if modrm is present in 2-byte opcodes
  * when the first byte of the 2-byte opcode is 0xff.
@@ -182,6 +187,17 @@ x86_modrm_opcode0_present (uint8_t opcode0)
         }
 }
 
+static enum x86_data_type
+x86_immediate_opcode0 (uint8_t opcode0)
+{
+        return X86_DATA_NONE;
+}
+static enum x86_data_type
+x86_immediate_opcode1 (uint8_t opcode1)
+{
+        return X86_DATA_NONE;
+}
+
 static void
 x86_opcode_set_state (struct x86_opcode_parser *parser, enum x86_state_e next_state)
 {
@@ -191,6 +207,32 @@ x86_opcode_set_state (struct x86_opcode_parser *parser, enum x86_state_e next_st
                 state_to_string (next_state));
 #endif /* X86_TRACE */
         parser->state = next_state;
+}
+
+static uint8_t
+x86_operand_size (struct x86_opcode_parser *parser, enum x86_data_type type)
+{
+        if (type == X86_DATA_NONE) {
+                return 0;
+        } else if (type == X86_DATA_BYTE) {
+                return 1;
+        }
+        assert (type == X86_DATA_WORD);
+        if (parser->mode == X86_MODE_16) {
+                if (parser->prefixes & X86_PREFIX_OP_SIZE) {
+                        return 4;
+                } else {
+                        return 2;
+                }
+        } else if (parser->mode == X86_MODE_32) {
+                if (parser->prefixes & X86_PREFIX_OP_SIZE) {
+                        return 2;
+                } else {
+                        return 4;
+                }
+        }
+        assert (0);
+        return 0;
 }
 
 
@@ -265,44 +307,55 @@ x86_opcode_parse (struct x86_opcode_parser *parser,
                         } else {
                                 /* first and only opcode byte. */
                                 parser->opcode0 = byte;
+                                parser->immediate = 
+                                        x86_operand_size (parser, 
+                                                          x86_immediate_opcode0 (parser->opcode0));
                                 if (x86_modrm_opcode0_present (parser->opcode0)) {
                                         next_state = X86_STATE_MODRM;
                                 } else {
-                                        next_state = X86_STATE_OPERAND;
+                                        next_state = X86_STATE_IMMEDIATE;
                                 }
                         }
                         break;
                 case X86_STATE_OPCODE1:
                         parser->opcode1 = byte;
-                        if (x86_modrm_opcode1_present (parser->opcode0)) {
+                        parser->immediate = 
+                                x86_operand_size (parser, 
+                                                  x86_immediate_opcode1 (parser->opcode1));
+                        if (x86_modrm_opcode1_present (parser->opcode1)) {
                                 next_state = X86_STATE_MODRM;
                         } else {
-                                next_state = X86_STATE_OPERAND;
+                                next_state = X86_STATE_IMMEDIATE;
                         }
                         break;
                 case X86_STATE_MODRM: {
                         uint8_t rm = byte & 0x07;
                         uint8_t mod = (byte >> 6) & 0x03;
                         //uint8_t reg = (byte >> 3) & 0x07;
+                        enum x86_data_type disp_type;
                         if (parser->mode == X86_MODE_32) {
                                 if ((mod == 0 && rm == 5) ||
                                     (mod == 2)) {
-                                        parser->displacement = 4;
+                                        disp_type = X86_DATA_WORD;
                                 } else if (mod == 1) {
-                                        parser->displacement = 1;
+                                        disp_type = X86_DATA_BYTE;
                                 } else {
-                                        parser->displacement = 0;
+                                        disp_type = X86_DATA_NONE;
                                 }
                         } else if (parser->mode == X86_MODE_16) {
                                 if ((mod == 0 && rm == 6) ||
                                     (mod == 2)) {
-                                        parser->displacement = 1;
+                                        disp_type = X86_DATA_WORD;
                                 } else if (mod == 1) {
-                                        parser->displacement = 2;
+                                        disp_type = X86_DATA_BYTE;
                                 } else {
-                                        parser->displacement = 0;
+                                        disp_type = X86_DATA_NONE;
                                 }
+                        } else {
+                                disp_type = X86_DATA_NONE;
+                                assert (0);
                         }
+                        parser->displacement = x86_operand_size (parser, disp_type);
                         if (parser->mode == X86_MODE_32 &&
                             mod != 3 &&
                             rm == 4) {
@@ -323,10 +376,12 @@ x86_opcode_parse (struct x86_opcode_parser *parser,
                         }
                         break;
                 case X86_STATE_IMMEDIATE:
-                        next_state = X86_STATE_ERROR;
-                        break;
-                case X86_STATE_OPERAND:
-                        next_state = X86_STATE_ERROR;
+                        if (parser->immediate > 0) {
+                                parser->immediate--;
+                                next_state = X86_STATE_IMMEDIATE;
+                        } else {
+                                next_state = X86_STATE_PREFIX_OR_OPCODE0;
+                        }
                         break;
                 case X86_STATE_ERROR:
                         goto out;
