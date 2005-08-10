@@ -39,6 +39,7 @@ state_to_string (enum x86_state_e state)
                 FOO (SIB);
                 FOO (DISPLACEMENT);
                 FOO (IMMEDIATE);
+                FOO (DONE);
                 FOO (ERROR);
         }
 #undef FOO
@@ -326,6 +327,62 @@ x86_opcode_set_state (struct x86_opcode_parser *parser, enum x86_state_e next_st
         parser->state = next_state;
 }
 
+static int
+x86_opcode_has_sib (struct x86_opcode_parser *parser)
+{
+        uint8_t rm = parser->modrm & 0x07;
+        uint8_t mod = (parser->modrm >> 6) & 0x03;
+
+        if (parser->mode == X86_MODE_32 &&
+            mod != 3 &&
+            rm == 4) {
+                return 1;
+        } else {
+                return 0;
+        }
+}
+
+static uint8_t
+x86_opcode_get_displacement_size (struct x86_opcode_parser *parser)
+{
+        uint8_t rm = parser->modrm & 0x07;
+        uint8_t mod = (parser->modrm >> 6) & 0x03;
+        uint8_t disp_size;
+        if (parser->mode == X86_MODE_32) {
+                if ((mod == 0 && rm == 5) ||
+                    (mod == 2)) {
+                        disp_size = x86_operand_size (parser);
+                } else if (mod == 1) {
+                        disp_size = 1;
+                } else {
+                        disp_size = 0;
+                }
+        } else if (parser->mode == X86_MODE_16) {
+                if ((mod == 0 && rm == 6) ||
+                    (mod == 2)) {
+                        disp_size = x86_operand_size (parser);
+                } else if (mod == 1) {
+                        disp_size = 1;
+                } else {
+                        disp_size = 0;
+                }
+        } else {
+                disp_size = 0;
+                assert (0);
+        }
+        return disp_size;
+}
+
+static uint8_t
+x86_opcode_get_immediate_size (struct x86_opcode_parser *parser)
+{
+        if (parser->opcode0 == 0x0f) {
+                return x86_opcode0_immediate_operand_size (parser, parser->opcode0);
+        } else {
+                return x86_opcode1_immediate_operand_size (parser->opcode1);
+        }
+}
+
 
 void 
 x86_opcode_initialize (struct x86_opcode_parser *parser, 
@@ -394,81 +451,83 @@ x86_opcode_parse (struct x86_opcode_parser *parser,
                                 next_state = X86_STATE_PREFIX_OR_OPCODE0;
                         } else if (byte == 0x0f) {
                                 /* a second opcode byte is coming. */
+                                parser->opcode0 = byte;
                                 next_state = X86_STATE_OPCODE1;
                         } else {
                                 /* first and only opcode byte. */
                                 parser->opcode0 = byte;
-                                parser->immediate_size = x86_opcode0_immediate_operand_size (parser, parser->opcode0);
                                 if (x86_opcode0_has_modrm (parser->opcode0)) {
                                         next_state = X86_STATE_MODRM;
-                                } else {
+                                } else if (x86_opcode_get_immediate_size  (parser) > 0) {
+                                        parser->tmp = x86_opcode_get_immediate_size  (parser);
+                                        parser->immediate = 0;
                                         next_state = X86_STATE_IMMEDIATE;
+                                } else {
+                                        next_state = X86_STATE_DONE;
                                 }
                         }
                         break;
                 case X86_STATE_OPCODE1:
                         parser->opcode1 = byte;
-                        parser->immediate_size = x86_opcode1_immediate_operand_size (parser->opcode1);
                         if (x86_opcode1_has_modrm (parser->opcode1)) {
                                 next_state = X86_STATE_MODRM;
-                        } else {
+                        } else if (x86_opcode_get_immediate_size (parser) > 0) {
+                                parser->tmp = x86_opcode_get_immediate_size (parser);
+                                parser->immediate = 0;
                                 next_state = X86_STATE_IMMEDIATE;
+                        } else {
+                                next_state = X86_STATE_DONE;
                         }
                         break;
                 case X86_STATE_MODRM: {
-                        uint8_t rm = byte & 0x07;
-                        uint8_t mod = (byte >> 6) & 0x03;
                         //uint8_t reg = (byte >> 3) & 0x07;
-                        uint8_t disp_size;
-                        if (parser->mode == X86_MODE_32) {
-                                if ((mod == 0 && rm == 5) ||
-                                    (mod == 2)) {
-                                        disp_size = x86_operand_size (parser);
-                                } else if (mod == 1) {
-                                        disp_size = 1;
-                                } else {
-                                        disp_size = 0;
-                                }
-                        } else if (parser->mode == X86_MODE_16) {
-                                if ((mod == 0 && rm == 6) ||
-                                    (mod == 2)) {
-                                        disp_size = x86_operand_size (parser);
-                                } else if (mod == 1) {
-                                        disp_size = 1;
-                                } else {
-                                        disp_size = 0;
-                                }
-                        } else {
-                                disp_size = 0;
-                                assert (0);
-                        }
-                        parser->displacement_size = disp_size;
-                        if (parser->mode == X86_MODE_32 &&
-                            mod != 3 &&
-                            rm == 4) {
+                        parser->modrm = byte;
+                        if (x86_opcode_has_sib (parser)) {
                                 next_state = X86_STATE_SIB;
-                        } else {
+                        } else if (x86_opcode_get_displacement_size (parser) > 0) {
+                                parser->displacement = 0;
+                                parser->tmp = x86_opcode_get_displacement_size (parser);
                                 next_state = X86_STATE_DISPLACEMENT;
+                        } else {
+                                next_state = X86_STATE_DONE;
                         }
                 } break;
                 case X86_STATE_SIB:
-                        next_state = X86_STATE_DISPLACEMENT;
-                        break;
-                case X86_STATE_DISPLACEMENT:
-                        if (parser->displacement_size > 0) {
-                                parser->displacement_size--;
+                        parser->sib = byte;
+                        if (x86_opcode_get_displacement_size (parser) > 0) {
+                                parser->displacement = 0;
+                                parser->tmp = x86_opcode_get_displacement_size (parser);
                                 next_state = X86_STATE_DISPLACEMENT;
                         } else {
+                                next_state = X86_STATE_DONE;
+                        }
+                        break;
+                case X86_STATE_DISPLACEMENT:
+                        if (parser->tmp > 0) {
+                                parser->tmp--;
+                                parser->displacement <<= 8;
+                                parser->displacement |= byte;
+                                next_state = X86_STATE_DISPLACEMENT;
+                        } else if (x86_opcode_get_immediate_size (parser) > 0) {
+                                parser->immediate = 0;
+                                parser->tmp = x86_opcode_get_immediate_size (parser);
                                 next_state = X86_STATE_IMMEDIATE;
+                        } else {
+                                next_state = X86_STATE_DONE;
                         }
                         break;
                 case X86_STATE_IMMEDIATE:
-                        if (parser->immediate_size > 0) {
-                                parser->immediate_size--;
+                        if (parser->tmp > 0) {
+                                parser->tmp--;
+                                parser->immediate <<= 8;
+                                parser->immediate |= byte;
                                 next_state = X86_STATE_IMMEDIATE;
                         } else {
-                                next_state = X86_STATE_PREFIX_OR_OPCODE0;
+                                next_state = X86_STATE_DONE;
                         }
+                case X86_STATE_DONE:
+                        x86_opcode_set_state (parser, X86_STATE_PREFIX_OR_OPCODE0);
+                        goto out;
                         break;
                 case X86_STATE_ERROR:
                         goto out;
@@ -480,4 +539,9 @@ x86_opcode_parse (struct x86_opcode_parser *parser,
         }
  out:
         return read;
+}
+
+void x86_opcode_print (struct x86_opcode_parser *parser)
+{
+        //printf ("%s\n", x86_opcode_to_string (parser));
 }

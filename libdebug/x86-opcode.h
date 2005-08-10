@@ -36,6 +36,7 @@ struct x86_opcode_parser {
                 X86_STATE_SIB,
                 X86_STATE_DISPLACEMENT,
                 X86_STATE_IMMEDIATE,
+                X86_STATE_DONE,
                 X86_STATE_ERROR
         } state;
         enum x86_prefixes_e {
@@ -56,9 +57,12 @@ struct x86_opcode_parser {
         } prefixes;
         uint8_t opcode0;
         uint8_t opcode1;
-        uint8_t displacement_size;
-        uint8_t immediate_size;
+        uint8_t sib;
+        uint8_t modrm;
+        uint64_t displacement;
+        uint64_t immediate;
         enum x86_mode_e mode;
+        uint8_t tmp;
 };
 
 void x86_opcode_initialize (struct x86_opcode_parser *parser, enum x86_mode_e);
@@ -67,6 +71,8 @@ void x86_opcode_initialize (struct x86_opcode_parser *parser, enum x86_mode_e);
  */
 uint32_t x86_opcode_parse (struct x86_opcode_parser *parser, 
                            uint8_t *buffer, uint32_t size);
+
+void x86_opcode_print (struct x86_opcode_parser *parser);
 
 
 #endif /* X86_OPCODE */
