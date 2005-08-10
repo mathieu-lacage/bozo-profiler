@@ -24,7 +24,8 @@
 
 enum x86_mode_e {
         X86_MODE_16,
-        X86_MODE_32
+        X86_MODE_32,
+        X86_MODE_64
 };
 
 struct x86_opcode_parser {
@@ -50,12 +51,13 @@ struct x86_opcode_parser {
                 X86_PREFIX_BRANCH_TAKEN     = (1<<9),
                 X86_PREFIX_BRANCH_NOT_TAKEN = (1<<10),
                 X86_PREFIX_OP_SIZE = (1<<11),
-                X86_PREFIX_AD_SIZE = (1<<12)
+                X86_PREFIX_AD_SIZE = (1<<12),
+                X86_PREFIX_REX     = (1<<13)
         } prefixes;
         uint8_t opcode0;
         uint8_t opcode1;
-        uint8_t displacement;
-        uint8_t immediate;
+        uint8_t displacement_size;
+        uint8_t immediate_size;
         enum x86_mode_e mode;
 };
 

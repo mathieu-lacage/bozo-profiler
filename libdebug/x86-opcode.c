@@ -49,7 +49,10 @@ state_to_string (enum x86_state_e state)
 enum x86_data_type {
         X86_DATA_NONE,
         X86_DATA_BYTE,
-        X86_DATA_WORD
+        X86_DATA_WORD,
+        X86_DATA_WORD_FIXED,
+        X86_DATA_DOUBLEWORD,
+        X86_POINTER
 };
 
 /* Calculates if modrm is present in 2-byte opcodes
@@ -58,7 +61,7 @@ enum x86_data_type {
  * maps
  */
 static int
-x86_modrm_opcode1_present (uint8_t opcode1)
+x86_opcode1_has_modrm (uint8_t opcode1)
 {
         static uint8_t modrm_bitmap1[] = {
                 0x0f, /* grp 6,7 LAR, LSL */
@@ -76,14 +79,14 @@ x86_modrm_opcode1_present (uint8_t opcode1)
                 0xff, /* CMOVcc */
                 0xff, /* CMOVcc */
 
-                0xff, /* *PS */
+                0xff, /* xxxPS */
                 0xff, /* *PS */
 
                 0xff, /* */
                 0xff, /* */
                 
                 0x7f, /* */
-                0xc0, /* MOVD, MOVQ */
+                0xff, /* MMX, MOVD, MOVQ */
 
                 0x00, /* Jcc, Jv */
                 0x00, /* Jcc, Jv */
@@ -125,7 +128,7 @@ x86_modrm_opcode1_present (uint8_t opcode1)
  * maps
  */
 static int
-x86_modrm_opcode0_present (uint8_t opcode0)
+x86_opcode0_has_modrm (uint8_t opcode0)
 {
         static uint8_t modrm_bitmap0[] = {
                 0x0f, /* ADD */
@@ -187,15 +190,129 @@ x86_modrm_opcode0_present (uint8_t opcode0)
         }
 }
 
-static enum x86_data_type
-x86_immediate_opcode0 (uint8_t opcode0)
+static uint8_t
+x86_operand_size (struct x86_opcode_parser *parser)
 {
-        return X86_DATA_NONE;
+        switch (parser->mode) {
+        case X86_MODE_64:
+                if (parser->prefixes & X86_PREFIX_REX) {
+                        return 8;
+                } else if (parser->prefixes & X86_PREFIX_OP_SIZE) {
+                        return 2;
+                } else {
+                        return 4;
+                }
+                break;
+        case X86_MODE_32:
+                if (parser->prefixes & X86_PREFIX_OP_SIZE) {
+                        return 2;
+                } else {
+                        return 4;
+                }
+                break;
+        case X86_MODE_16:
+                if (parser->prefixes & X86_PREFIX_OP_SIZE) {
+                        return 4;
+                } else {
+                        return 2;
+                }
+                break;
+        }
+        assert (0);
+        return 0;
 }
-static enum x86_data_type
-x86_immediate_opcode1 (uint8_t opcode1)
+
+
+
+static int
+x86_opcode_find (uint8_t *data, uint8_t size, uint8_t opcode)
 {
-        return X86_DATA_NONE;
+        uint8_t i;
+        for (i = 0; i < size; i++) {
+                if (data[i] == opcode) {
+                        return 1;
+                }
+        }
+        return 0;
+}
+
+static int
+x86_opcode0_is_Iv (uint8_t opcode0)
+{
+        static uint8_t opcode0_has_Iv [] = {
+                0x05, 0x15, 0x25, 0x35,
+                0x0d, 0x1d, 0x2d, 0x3d,
+                0x81, 0xc7, 0x68, 0x69,
+                0xa9, 0xe8, 0xe9
+        };
+        return x86_opcode_find (opcode0_has_Iv, 
+                                sizeof (opcode0_has_Iv), 
+                                opcode0);
+}
+
+static int
+x86_opcode0_is_Ib (uint8_t opcode0)
+{
+        uint8_t opcode0_has_Ib [] = {
+                0x04, 0x14, 0x24, 0x34,
+                0x0c, 0x1c, 0x2c, 0x3c,
+                0x80, 0x82, 0x83, 
+                0x6a, 0x6b,
+                0xc0, 0xc1, 0xc6, 
+                0xd4, 0xd5,
+                0xa0, 0xc8, 0xcd, 0xeb,
+                0xe0, 0xe1, 0xe2, 0xe3,
+                0xe4, 0xe5, 0xe6, 0xe7,
+                0x78, 0x79, 0x7a, 0x7b,
+                0x7c, 0x7d, 0x7e, 0x7f
+        };
+        return x86_opcode_find (opcode0_has_Ib,
+                                sizeof (opcode0_has_Ib),
+                                opcode0);
+}
+
+
+static uint8_t
+x86_opcode0_immediate_operand_size (struct x86_opcode_parser *parser, uint8_t opcode0)
+{
+        if (opcode0 == 0x9a ||
+            opcode0 == 0xea) {
+                /* call Ap or Jmp Ap */
+                /* XXX It is not clear to me in which case the size of the operand
+                 * is really 48 bits here. For now, I assume 32 bits all the time.
+                 */
+                return 4;
+        } else if (opcode0 == 0xc2 ||
+                   opcode0 == 0xca) {
+                /* Iw operands */
+                return 2;
+        } else if (opcode0 == 0xc8) {
+                /* Iw,Ib operands */
+                return 3;
+        } else if (x86_opcode0_is_Iv (opcode0)) {
+                return x86_operand_size (parser);
+        } else if (x86_opcode0_is_Ib (opcode0)) {
+                return 1;
+        } else {
+                return 0;
+        }
+}
+static uint8_t
+x86_opcode1_immediate_operand_size (uint8_t opcode1)
+{
+        static uint8_t opcode1_has_Ib [] = {
+                0x70, 0x71, 0x72, 0x73, 
+                0xa4,
+                0xc2, 0xc4, 0xc5, 0xc6,
+                0xac, 0xba
+        };
+        if (x86_opcode_find (opcode1_has_Ib,
+                             sizeof (opcode1_has_Ib),
+                             opcode1)) {
+                return 1;
+        } else {
+                return 0;
+        }
 }
 
 static void
@@ -207,32 +324,6 @@ x86_opcode_set_state (struct x86_opcode_parser *parser, enum x86_state_e next_st
                 state_to_string (next_state));
 #endif /* X86_TRACE */
         parser->state = next_state;
-}
-
-static uint8_t
-x86_operand_size (struct x86_opcode_parser *parser, enum x86_data_type type)
-{
-        if (type == X86_DATA_NONE) {
-                return 0;
-        } else if (type == X86_DATA_BYTE) {
-                return 1;
-        }
-        assert (type == X86_DATA_WORD);
-        if (parser->mode == X86_MODE_16) {
-                if (parser->prefixes & X86_PREFIX_OP_SIZE) {
-                        return 4;
-                } else {
-                        return 2;
-                }
-        } else if (parser->mode == X86_MODE_32) {
-                if (parser->prefixes & X86_PREFIX_OP_SIZE) {
-                        return 2;
-                } else {
-                        return 4;
-                }
-        }
-        assert (0);
-        return 0;
 }
 
 
@@ -307,10 +398,8 @@ x86_opcode_parse (struct x86_opcode_parser *parser,
                         } else {
                                 /* first and only opcode byte. */
                                 parser->opcode0 = byte;
-                                parser->immediate = 
-                                        x86_operand_size (parser, 
-                                                          x86_immediate_opcode0 (parser->opcode0));
-                                if (x86_modrm_opcode0_present (parser->opcode0)) {
+                                parser->immediate_size = x86_opcode0_immediate_operand_size (parser, parser->opcode0);
+                                if (x86_opcode0_has_modrm (parser->opcode0)) {
                                         next_state = X86_STATE_MODRM;
                                 } else {
                                         next_state = X86_STATE_IMMEDIATE;
@@ -319,10 +408,8 @@ x86_opcode_parse (struct x86_opcode_parser *parser,
                         break;
                 case X86_STATE_OPCODE1:
                         parser->opcode1 = byte;
-                        parser->immediate = 
-                                x86_operand_size (parser, 
-                                                  x86_immediate_opcode1 (parser->opcode1));
-                        if (x86_modrm_opcode1_present (parser->opcode1)) {
+                        parser->immediate_size = x86_opcode1_immediate_operand_size (parser->opcode1);
+                        if (x86_opcode1_has_modrm (parser->opcode1)) {
                                 next_state = X86_STATE_MODRM;
                         } else {
                                 next_state = X86_STATE_IMMEDIATE;
@@ -332,30 +419,30 @@ x86_opcode_parse (struct x86_opcode_parser *parser,
                         uint8_t rm = byte & 0x07;
                         uint8_t mod = (byte >> 6) & 0x03;
                         //uint8_t reg = (byte >> 3) & 0x07;
-                        enum x86_data_type disp_type;
+                        uint8_t disp_size;
                         if (parser->mode == X86_MODE_32) {
                                 if ((mod == 0 && rm == 5) ||
                                     (mod == 2)) {
-                                        disp_type = X86_DATA_WORD;
+                                        disp_size = x86_operand_size (parser);
                                 } else if (mod == 1) {
-                                        disp_type = X86_DATA_BYTE;
+                                        disp_size = 1;
                                 } else {
-                                        disp_type = X86_DATA_NONE;
+                                        disp_size = 0;
                                 }
                         } else if (parser->mode == X86_MODE_16) {
                                 if ((mod == 0 && rm == 6) ||
                                     (mod == 2)) {
-                                        disp_type = X86_DATA_WORD;
+                                        disp_size = x86_operand_size (parser);
                                 } else if (mod == 1) {
-                                        disp_type = X86_DATA_BYTE;
+                                        disp_size = 1;
                                 } else {
-                                        disp_type = X86_DATA_NONE;
+                                        disp_size = 0;
                                 }
                         } else {
-                                disp_type = X86_DATA_NONE;
+                                disp_size = 0;
                                 assert (0);
                         }
-                        parser->displacement = x86_operand_size (parser, disp_type);
+                        parser->displacement_size = disp_size;
                         if (parser->mode == X86_MODE_32 &&
                             mod != 3 &&
                             rm == 4) {
@@ -368,16 +455,16 @@ x86_opcode_parse (struct x86_opcode_parser *parser,
                         next_state = X86_STATE_DISPLACEMENT;
                         break;
                 case X86_STATE_DISPLACEMENT:
-                        if (parser->displacement > 0) {
-                                parser->displacement--;
+                        if (parser->displacement_size > 0) {
+                                parser->displacement_size--;
                                 next_state = X86_STATE_DISPLACEMENT;
                         } else {
                                 next_state = X86_STATE_IMMEDIATE;
                         }
                         break;
                 case X86_STATE_IMMEDIATE:
-                        if (parser->immediate > 0) {
-                                parser->immediate--;
+                        if (parser->immediate_size > 0) {
+                                parser->immediate_size--;
                                 next_state = X86_STATE_IMMEDIATE;
                         } else {
                                 next_state = X86_STATE_PREFIX_OR_OPCODE0;
