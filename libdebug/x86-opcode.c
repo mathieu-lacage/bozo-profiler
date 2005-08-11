@@ -24,6 +24,7 @@
 
 #define X86_TRACE 1
 
+#ifdef X86_TRACE
 static char const *
 state_to_string (enum x86_state_e state)
 {
@@ -46,6 +47,7 @@ state_to_string (enum x86_state_e state)
         assert (0);
         return "0xdeadbeaf";
 }
+#endif /* X86_TRACE */
 
 enum x86_data_type {
         X86_DATA_NONE,
@@ -392,23 +394,20 @@ x86_opcode_initialize (struct x86_opcode_parser *parser,
         parser->state = X86_STATE_PREFIX_OR_OPCODE0;
 }
 
+int x86_opcode_error (struct x86_opcode_parser *parser)
+{
+        if (parser->state == X86_STATE_ERROR) {
+                return 1;
+        } else {
+                return 0;
+        }
+}
+
 uint32_t
 x86_opcode_parse (struct x86_opcode_parser *parser, 
                   uint8_t *buffer, uint32_t size)
 {
         uint32_t read = 0;
-#if 0
-        read = 0;
-        while (read < size) {
-                uint32_t mod = read % 16;
-                if (mod == 0 ) {
-                        printf ("\n");
-                }
-                printf ("%02x ", *buffer);
-                read++;
-                buffer++;
-        }
-#endif
         read = 0;
         while (read < size) {
                 enum x86_state_e next_state;
@@ -541,7 +540,137 @@ x86_opcode_parse (struct x86_opcode_parser *parser,
         return read;
 }
 
+static char const *
+x86_opcode1_to_string (uint8_t opcode1)
+{
+        return "invalid two-byte opcode";
+}
+
+static char const *
+x86_opcode0_to_string (struct x86_opcode_parser *parser)
+{
+        static char const * opcode0_to_string [] = {
+                "add", "add", "add", "add", 
+                "add", "add", "push %es", "pop %es",
+                "or", "or", "or", "or", 
+                "or", "or", "push %cs", "error",
+                "adc", "adc", "adc", "adc",
+                "adc", "adc", "push %ss", "pop %ss",
+                "sbb", "sbb", "sbb", "sbb",
+                "sbb", "sbb", "push %ds", "pop %ds",
+                "and", "and", "and", "and", 
+                "and", "and", "seg=%es", "daa",
+                "sub", "sub", "sub", "sub", 
+                "sub", "sub", "seg=%cs", "das",
+                "xor", "xor", "xor", "xor", 
+                "xor", "xor", "seg=%ss", "aaa",
+                "cmp", "cmp", "cmp", "cmp", 
+                "cmp", "cmp", "seg=%ds", "aas",
+                "inc", "inc", "inc", "inc", 
+                "inc", "inc", "inc", "inc", 
+                "dec", "dec", "dec", "dec", 
+                "dec", "dec", "dec", "dec", 
+                "push", "push", "push", "push", 
+                "push", "push", "push", "push", 
+                "pop", "pop", "pop", "pop", 
+                "pop", "pop", "pop", "pop", 
+                "pusha", "popa", "bound", "arpl",
+                "seg=%fs", "seg=%gs", "prefix op size", "prefix ad size",
+                "push", "imul", "push", "imul",
+                "ins", "ins", "outs", "outs",
+                "jcc", "jcc", "jcc", "jcc", 
+                "jcc", "jcc", "jcc", "jcc", 
+                "jcc", "jcc", "jcc", "jcc", 
+                "jcc", "jcc", "jcc", "jcc", 
+                "grp1", "grp1", "grp1", "grp1",
+                "test", "test", "xchg", "xchg",
+                "mov", "mov", "mov", "mov", 
+                "mov", "lea", "mov", "pop",
+                "nop", "xchg", "xchg", "xchg", 
+                "xchg", "xchg", "xchg", "xchg", 
+                "cbw/cwde", "cwd/cdq", "callf", "fwait/wait",
+                "pushf", "popf", "sahf", "lahf",
+                "mov", "mov", "mov", "mov", 
+                "movs", "movs", "cmps", "cmps", 
+                "test", "test", "stos", "stos",
+                "lods", "lods", "scas", "scas",
+                "mov", "mov", "mov", "mov", 
+                "mov", "mov", "mov", "mov", 
+                "mov", "mov", "mov", "mov", 
+                "mov", "mov", "mov", "mov", 
+                "grp2", "grp2", "retn", "retn",
+                "les", "lds", "mov", "mov",
+                "enter", "leave", "retf", "retf",
+                "int3", "int", "into", "iret",
+                "grp2", "grp2", "grp2", "grp2",
+                "aam", "aad", "invalid", "xlat",
+                "escape copro", "escape copro", "escape copro", "escape copro", 
+                "escape copro", "escape copro", "escape copro", "escape copro", 
+                "loopn", "loop", "loop", "jcxz/jecxz",
+                "in", "in", "out", "out", 
+                "call", "jmp", "jmp", "jmp",
+                "in", "in", "out", "out",
+                "prefix lock", "invalid", "prefix repne", "prefix rep",
+                "hlt", "cmc", "grp3", "grp3", 
+                "clc", "stc", "cli", "sti",
+                "cld", "std", "grp4", "grp5"
+        };
+        static char const *opcode0_grp1_to_string [] = {
+                "add", "or", "adc", "sbb",
+                "and", "sub", "xor", "cmp"
+        };
+        static char const *opcode0_grp2_to_string [] = {
+                "rol", "ror", "rcl", "rcr",
+                "shl/sal", "shr", "invalid", "sar"
+        };
+        static char const *opcode0_grp3_to_string [] = {
+                "test", "invalid", "not", "neg",
+                "mul", "imul", "div", "idiv"
+        };
+        static char const *opcode0_grp4_to_string [] = {
+                "inc", "dec", "invalid", "invalid", 
+                "invalid", "invalid", "invalid", "invalid", 
+        };
+        static char const *opcode0_grp5_to_string [] = {
+                "inc", "dec", "calln", "callf", 
+                "jmpn", "jmpf", "push", "invalid"
+        };
+        uint8_t opcode0 = parser->opcode0;
+        if (opcode0 >= 0x80 && opcode0 <= 0x83) {
+                uint8_t index = (parser->modrm >> 3) & 0x7;
+                assert (index < sizeof (opcode0_grp1_to_string));
+                return opcode0_grp1_to_string[index];
+        } else if (opcode0 == 0xc0 || opcode0 == 0xc1 ||
+            (opcode0 >= 0xd0 && opcode0 <= 0xd3)) {
+                uint8_t index = (parser->modrm >> 3) & 0x7;
+                assert (index < sizeof (opcode0_grp2_to_string));
+                return opcode0_grp2_to_string[index];
+        } else if (opcode0 == 0xf6 || opcode0 == 0xf7) {
+                uint8_t index = (parser->modrm >> 3) & 0x7;
+                assert (index < sizeof (opcode0_grp3_to_string));
+                return opcode0_grp3_to_string[index];
+        } else if (opcode0 == 0xfe) {
+                uint8_t index = (parser->modrm >> 3) & 0x7;
+                assert (index < sizeof (opcode0_grp4_to_string));
+                return opcode0_grp4_to_string[index];
+        } else if (opcode0 == 0xff) {
+                uint8_t index = (parser->modrm >> 3) & 0x7;
+                assert (index < sizeof (opcode0_grp5_to_string));
+                return opcode0_grp5_to_string[index];
+        } else if (opcode0 >= 0xd8 && opcode0 <= 0xdf) {
+                return "esc";
+        } else {
+                return opcode0_to_string[opcode0];
+        }            
+        return "invalid one-byte opcode";
+}
+
 void x86_opcode_print (struct x86_opcode_parser *parser)
 {
+        if (parser->opcode0 == 0x0f) {
+                x86_opcode1_to_string (parser->opcode1);
+        } else {
+                printf ("%s\n", x86_opcode0_to_string (parser));
+        }
         //printf ("%s\n", x86_opcode_to_string (parser));
 }

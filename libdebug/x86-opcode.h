@@ -74,5 +74,7 @@ uint32_t x86_opcode_parse (struct x86_opcode_parser *parser,
 
 void x86_opcode_print (struct x86_opcode_parser *parser);
 
+int x86_opcode_error (struct x86_opcode_parser *parser);
+
 
 #endif /* X86_OPCODE */

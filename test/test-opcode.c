@@ -40,7 +40,7 @@ test_opcode (int argc, char *argv[])
         uint8_t *text_buffer;
         uint32_t text_size;
         uint8_t *data;
-        uint32_t size;
+        uint32_t size, total_read;
         char const *filename = argv[0];
         struct x86_opcode_parser parser;
 
@@ -76,7 +76,14 @@ test_opcode (int argc, char *argv[])
 
         x86_opcode_initialize (&parser, X86_MODE_32);
 
-        x86_opcode_parse (&parser, text_buffer, text_size);
+        total_read = 0;
+        while (total_read < size && !x86_opcode_error (&parser)) {
+                uint32_t tmp_read = x86_opcode_parse (&parser, text_buffer, text_size);
+                total_read += tmp_read;
+                text_buffer += tmp_read;
+                text_size -= tmp_read;
+                x86_opcode_print (&parser);
+        }
 
         return 0;
  error:
