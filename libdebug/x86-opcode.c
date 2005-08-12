@@ -247,7 +247,8 @@ x86_opcode0_is_Iv (uint8_t opcode0)
                 0x05, 0x15, 0x25, 0x35,
                 0x0d, 0x1d, 0x2d, 0x3d,
                 0x81, 0xc7, 0x68, 0x69,
-                0xa9, 0xe8, 0xe9
+                0xa9, 0xe8, 0xe9, 0xa3, 
+                0xa1
         };
         return x86_opcode_find (opcode0_has_Iv, 
                                 sizeof (opcode0_has_Iv), 
@@ -270,7 +271,8 @@ x86_opcode0_is_Ib (uint8_t opcode0)
                 0x70, 0x71, 0x72, 0x73,
                 0x74, 0x75, 0x76, 0x77,
                 0x78, 0x79, 0x7a, 0x7b,
-                0x7c, 0x7d, 0x7e, 0x7f
+                0x7c, 0x7d, 0x7e, 0x7f,
+                0xa2
         };
         return x86_opcode_find (opcode0_has_Ib,
                                 sizeof (opcode0_has_Ib),
@@ -776,6 +778,7 @@ run_tests (void)
 
 int x86_opcode_run_self_tests (void)
 {
+        add_test ("mov %eax,0x804d234", 5, 0xa3, 0x34, 0xd2, 0x04, 0x08);
         add_test ("je 0x8049509", 2, 0x74, 0x02);
         add_test ("test %eax,%eax", 2, 0x85, 0xc0);
         add_test ("push %edx", 1, 0x52);
