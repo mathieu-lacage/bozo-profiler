@@ -79,7 +79,7 @@ int x86_opcode_error (struct x86_opcode_parser *parser);
 
 
 #ifdef RUN_SELF_TESTS
-void x86_opcode_run_self_tests (void);
+int x86_opcode_run_self_tests (void);
 #endif /* RUN_SELF_TESTS */
 
 #endif /* X86_OPCODE */

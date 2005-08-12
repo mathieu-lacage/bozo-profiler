@@ -22,7 +22,7 @@
 
 #include "x86-opcode.h"
 
-#define noX86_TRACE 1
+#define nopeX86_TRACE 1
 
 #ifdef X86_TRACE
 static char const *
@@ -503,6 +503,10 @@ x86_opcode_parse (struct x86_opcode_parser *parser,
                                 parser->displacement = 0;
                                 parser->tmp = x86_opcode_get_displacement_size (parser);
                                 next_state = X86_STATE_DISPLACEMENT;
+                        } else if (x86_opcode_get_immediate_size  (parser) > 0) {
+                                parser->tmp = x86_opcode_get_immediate_size  (parser);
+                                parser->immediate = 0;
+                                next_state = X86_STATE_IMMEDIATE;
                         } else {
                                 next_state = X86_STATE_DONE;
                         }
@@ -768,13 +772,17 @@ run_tests (void)
 }
 
 
-void x86_opcode_run_self_tests (void)
+int x86_opcode_run_self_tests (void)
 {
+        add_test ("push %edx", 1, 0x52);
+        add_test ("add $0x3c3b,%ebx", 6, 0x81, 0xc3, 0x3b, 0x3c, 0x00, 0x00);
         add_test ("push $0x804c264", 5, 0x68, 0x64, 0xc2, 0x04, 0x08);
 
         if (run_tests ()) {
                 printf ("Error while running x86 opcode tests.\n");
+                return 1;
         }
+        return 0;
 }
 
 #endif /* RUN_SELF_TESTS */
