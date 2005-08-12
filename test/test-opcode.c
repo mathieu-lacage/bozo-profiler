@@ -44,6 +44,8 @@ test_opcode (int argc, char *argv[])
         char const *filename = argv[0];
         struct x86_opcode_parser parser;
 
+        x86_opcode_run_self_tests ();
+
         fd = open (filename, O_RDONLY);
         if (fd == -1) {
                 printf ("error opening \"%s\"\n", filename);

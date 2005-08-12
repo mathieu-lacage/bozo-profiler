@@ -22,7 +22,7 @@
 
 #include "x86-opcode.h"
 
-#define X86_TRACE 1
+#define noX86_TRACE 1
 
 #ifdef X86_TRACE
 static char const *
@@ -194,7 +194,7 @@ x86_opcode0_has_modrm (uint8_t opcode0)
 }
 
 static uint8_t
-x86_operand_size (struct x86_opcode_parser *parser)
+x86_wdw_operand_size (struct x86_opcode_parser *parser)
 {
         switch (parser->mode) {
         case X86_MODE_64:
@@ -233,6 +233,7 @@ x86_opcode_find (uint8_t *data, uint8_t size, uint8_t opcode)
         uint8_t i;
         for (i = 0; i < size; i++) {
                 if (data[i] == opcode) {
+                        //printf ("0x%02x -- 0x%02x\n", data[i], opcode);
                         return 1;
                 }
         }
@@ -293,7 +294,7 @@ x86_opcode0_immediate_operand_size (struct x86_opcode_parser *parser, uint8_t op
                 /* Iw,Ib operands */
                 return 3;
         } else if (x86_opcode0_is_Iv (opcode0)) {
-                return x86_operand_size (parser);
+                return x86_wdw_operand_size (parser);
         } else if (x86_opcode0_is_Ib (opcode0)) {
                 return 1;
         } else {
@@ -353,7 +354,7 @@ x86_opcode_get_displacement_size (struct x86_opcode_parser *parser)
         if (parser->mode == X86_MODE_32) {
                 if ((mod == 0 && rm == 5) ||
                     (mod == 2)) {
-                        disp_size = x86_operand_size (parser);
+                        disp_size = x86_wdw_operand_size (parser);
                 } else if (mod == 1) {
                         disp_size = 1;
                 } else {
@@ -362,7 +363,7 @@ x86_opcode_get_displacement_size (struct x86_opcode_parser *parser)
         } else if (parser->mode == X86_MODE_16) {
                 if ((mod == 0 && rm == 6) ||
                     (mod == 2)) {
-                        disp_size = x86_operand_size (parser);
+                        disp_size = x86_wdw_operand_size (parser);
                 } else if (mod == 1) {
                         disp_size = 1;
                 } else {
@@ -379,9 +380,9 @@ static uint8_t
 x86_opcode_get_immediate_size (struct x86_opcode_parser *parser)
 {
         if (parser->opcode0 == 0x0f) {
-                return x86_opcode0_immediate_operand_size (parser, parser->opcode0);
-        } else {
                 return x86_opcode1_immediate_operand_size (parser->opcode1);
+        } else {
+                return x86_opcode0_immediate_operand_size (parser, parser->opcode0);
         }
 }
 
@@ -402,6 +403,14 @@ int x86_opcode_error (struct x86_opcode_parser *parser)
                 return 0;
         }
 }
+int x86_opcode_ok (struct x86_opcode_parser *parser)
+{
+        if (parser->state == X86_STATE_DONE) {
+                return 1;
+        } else {
+                return 0;
+        }
+}
 
 uint32_t
 x86_opcode_parse (struct x86_opcode_parser *parser, 
@@ -409,7 +418,14 @@ x86_opcode_parse (struct x86_opcode_parser *parser,
 {
         uint32_t read = 0;
         read = 0;
-        while (read < size) {
+
+        if (parser->state == X86_STATE_DONE) {
+                x86_opcode_set_state (parser, X86_STATE_PREFIX_OR_OPCODE0);
+        }
+
+        while (read < size &&
+               parser->state != X86_STATE_DONE &&
+               parser->state != X86_STATE_ERROR) {
                 enum x86_state_e next_state;
                 uint8_t byte = *buffer;
                 next_state = X86_STATE_ERROR;
@@ -506,6 +522,8 @@ x86_opcode_parse (struct x86_opcode_parser *parser,
                                 parser->tmp--;
                                 parser->displacement <<= 8;
                                 parser->displacement |= byte;
+                        }
+                        if (parser->tmp > 0) {
                                 next_state = X86_STATE_DISPLACEMENT;
                         } else if (x86_opcode_get_immediate_size (parser) > 0) {
                                 parser->immediate = 0;
@@ -520,23 +538,22 @@ x86_opcode_parse (struct x86_opcode_parser *parser,
                                 parser->tmp--;
                                 parser->immediate <<= 8;
                                 parser->immediate |= byte;
+                        }
+                        if (parser->tmp > 0) {
                                 next_state = X86_STATE_IMMEDIATE;
                         } else {
                                 next_state = X86_STATE_DONE;
                         }
-                case X86_STATE_DONE:
-                        x86_opcode_set_state (parser, X86_STATE_PREFIX_OR_OPCODE0);
-                        goto out;
                         break;
+                case X86_STATE_DONE:
                 case X86_STATE_ERROR:
-                        goto out;
+                        assert (0);
                         break;
                 }
                 x86_opcode_set_state (parser, next_state);
                 read++;
                 buffer++;
         }
- out:
         return read;
 }
 
@@ -674,3 +691,90 @@ void x86_opcode_print (struct x86_opcode_parser *parser)
         }
         //printf ("%s\n", x86_opcode_to_string (parser));
 }
+
+#ifdef RUN_SELF_TESTS
+
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+struct test {
+        struct test *next;
+        char *inst;
+        uint8_t n_bytes;
+        uint8_t array[0];
+} *g_tests = NULL;
+
+static void
+add_test (char const *inst, uint8_t n, uint8_t c0, ...)
+{
+        va_list ap;
+        uint8_t i;
+        struct test *new_test;
+
+        new_test = malloc (sizeof (struct test)+n);
+        assert (new_test != NULL);
+        new_test->next = g_tests;
+        new_test->inst = strdup (inst);
+        new_test->n_bytes = n;
+        va_start (ap, c0);
+        new_test->array[0] = c0;
+        for (i = 1; i < n; i++) {
+                int arg = va_arg (ap, int);
+                new_test->array[i] = (uint8_t)arg & 0xff;
+        }
+        g_tests = new_test;
+}
+
+static void
+test_warn (struct test *t, char const *format, ...)
+{
+        va_list ap;
+        uint8_t i;
+        printf ("TEST WARNING: \"%s\" ", t->inst);
+        for (i = 0; i < t->n_bytes; i++) {
+                printf ("%02x ", t->array[i]);
+        }
+        printf ("\n");
+        va_start (ap, format);
+        vprintf (format, ap);
+        printf ("\n");
+}
+
+
+static int
+run_tests (void)
+{
+        struct x86_opcode_parser parser;
+        struct test *tmp;
+        int error = 0;
+
+        x86_opcode_initialize (&parser, X86_MODE_32);
+
+        for (tmp = g_tests; tmp != NULL; tmp = tmp->next) {
+                uint32_t bytes_read = x86_opcode_parse (&parser, tmp->array, tmp->n_bytes);
+                if (bytes_read != tmp->n_bytes) {
+                        error = 1;
+                        test_warn (tmp, "failed to read enough bytes. Expected: %u, Got: %u", 
+                                   tmp->n_bytes, bytes_read);
+                }
+                if (!x86_opcode_ok (&parser)) {
+                        error = 1;
+                        test_warn (tmp, "failed to decode.");
+                }
+        }
+        return error;
+}
+
+
+void x86_opcode_run_self_tests (void)
+{
+        add_test ("push $0x804c264", 5, 0x68, 0x64, 0xc2, 0x04, 0x08);
+
+        if (run_tests ()) {
+                printf ("Error while running x86 opcode tests.\n");
+        }
+}
+
+#endif /* RUN_SELF_TESTS */

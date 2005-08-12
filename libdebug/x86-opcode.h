@@ -74,7 +74,12 @@ uint32_t x86_opcode_parse (struct x86_opcode_parser *parser,
 
 void x86_opcode_print (struct x86_opcode_parser *parser);
 
+int x86_opcode_ok (struct x86_opcode_parser *parser);
 int x86_opcode_error (struct x86_opcode_parser *parser);
 
+
+#ifdef RUN_SELF_TESTS
+void x86_opcode_run_self_tests (void);
+#endif /* RUN_SELF_TESTS */
 
 #endif /* X86_OPCODE */
