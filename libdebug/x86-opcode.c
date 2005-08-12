@@ -58,10 +58,8 @@ enum x86_data_type {
         X86_POINTER
 };
 
-/* Calculates if modrm is present in 2-byte opcodes
- * when the first byte of the 2-byte opcode is 0xff.
- * This bitmap table was built from the intel opcode 
- * maps
+/********************************************************
+ * Calculate whether or not an opcode has a modrm byte.
  */
 static int
 x86_opcode1_has_modrm (uint8_t opcode1)
@@ -126,10 +124,6 @@ x86_opcode1_has_modrm (uint8_t opcode1)
         }
 }
 
-/* Calculates if modrm is present in 1-byte opcodes.
- * This bitmap table was built from the intel opcode 
- * maps
- */
 static int
 x86_opcode0_has_modrm (uint8_t opcode0)
 {
@@ -225,7 +219,9 @@ x86_wdw_operand_size (struct x86_opcode_parser *parser)
         return 0;
 }
 
-
+/************************************************************
+ *   Calculate the size of the immediate operand.
+ */
 
 static int
 x86_opcode_find (uint8_t *data, uint8_t size, uint8_t opcode)
@@ -309,8 +305,8 @@ x86_opcode0_immediate_operand_size (struct x86_opcode_parser *parser, uint8_t op
                 return 0;
         }
 }
-static uint8_t
-x86_opcode1_immediate_operand_size (uint8_t opcode1)
+static int
+x86_opcode1_is_Ib (uint8_t opcode1)
 {
         static uint8_t opcode1_has_Ib [] = {
                 0x70, 0x71, 0x72, 0x73, 
@@ -326,6 +322,44 @@ x86_opcode1_immediate_operand_size (uint8_t opcode1)
                 return 0;
         }
 }
+static int
+x86_opcode1_is_Iv (uint8_t opcode1)
+{
+        static uint8_t opcode1_has_Iv [] = {
+                0x80, 0x81, 0x82, 0x83,
+                0x84, 0x85, 0x86, 0x87
+        };
+        if (x86_opcode_find (opcode1_has_Iv,
+                             sizeof (opcode1_has_Iv),
+                             opcode1)) {
+                return 1;
+        } else {
+                return 0;
+        }
+}
+static uint8_t
+x86_opcode1_immediate_operand_size (struct x86_opcode_parser *parser, uint8_t opcode1)
+{
+        if (x86_opcode1_is_Ib (opcode1)) {
+                return 1;
+        } else if (x86_opcode1_is_Iv (opcode1)) {
+                return x86_wdw_operand_size (parser);
+        } else {
+                return 0;
+        }
+}
+
+static uint8_t
+x86_opcode_get_immediate_size (struct x86_opcode_parser *parser)
+{
+        if (parser->opcode0 == 0x0f) {
+                return x86_opcode1_immediate_operand_size (parser, parser->opcode1);
+        } else {
+                return x86_opcode0_immediate_operand_size (parser, parser->opcode0);
+        }
+}
+
+
 
 static void
 x86_opcode_set_state (struct x86_opcode_parser *parser, enum x86_state_e next_state)
@@ -382,16 +416,6 @@ x86_opcode_get_displacement_size (struct x86_opcode_parser *parser)
                 assert (0);
         }
         return disp_size;
-}
-
-static uint8_t
-x86_opcode_get_immediate_size (struct x86_opcode_parser *parser)
-{
-        if (parser->opcode0 == 0x0f) {
-                return x86_opcode1_immediate_operand_size (parser->opcode1);
-        } else {
-                return x86_opcode0_immediate_operand_size (parser, parser->opcode0);
-        }
 }
 
 
@@ -782,6 +806,7 @@ run_tests (void)
 
 int x86_opcode_run_self_tests (void)
 {
+        add_test ("je 80498d7 <main+0x367>", 6, 0x0f, 0x84, 0x38, 0x03, 0x00, 0x00);
         add_test ("mov $0x0,%eax", 5, 0xb8, 0x00, 0x00, 0x00, 0x00);
         add_test ("je +3", 2, 0x74, 0x10);
         add_test ("sub $0xc,%esp", 3, 0x83, 0xec, 0x0c);
