@@ -418,13 +418,19 @@ x86_opcode_get_displacement_size (struct x86_opcode_parser *parser)
         return disp_size;
 }
 
+static void 
+x86_opcode_reinit (struct x86_opcode_parser *parser)
+{
+        parser->prefixes = 0;
+        parser->state = X86_STATE_PREFIX_OR_OPCODE0;
+}
 
 void 
 x86_opcode_initialize (struct x86_opcode_parser *parser, 
                        enum x86_mode_e mode)
 {
         parser->mode = mode;
-        parser->state = X86_STATE_PREFIX_OR_OPCODE0;
+        x86_opcode_reinit (parser);
 }
 
 int x86_opcode_error (struct x86_opcode_parser *parser)
@@ -452,7 +458,7 @@ x86_opcode_parse (struct x86_opcode_parser *parser,
         read = 0;
 
         if (parser->state == X86_STATE_DONE) {
-                x86_opcode_set_state (parser, X86_STATE_PREFIX_OR_OPCODE0);
+                x86_opcode_reinit (parser);
         }
 
         while (read < size &&
