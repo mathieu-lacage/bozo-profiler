@@ -555,6 +555,10 @@ x86_opcode_parse (struct x86_opcode_parser *parser,
                                 parser->displacement = 0;
                                 parser->tmp = x86_opcode_get_displacement_size (parser);
                                 next_state = X86_STATE_DISPLACEMENT;
+                        } else if (x86_opcode_get_immediate_size (parser) > 0) {
+                                parser->immediate = 0;
+                                parser->tmp = x86_opcode_get_immediate_size (parser);
+                                next_state = X86_STATE_IMMEDIATE;
                         } else {
                                 next_state = X86_STATE_DONE;
                         }
@@ -812,6 +816,7 @@ run_tests (void)
 
 int x86_opcode_run_self_tests (void)
 {
+        add_test ("movl   $0x804d760,(%esp)", 7, 0xc7, 0x04, 0x24, 0x60, 0xd7, 0x04, 0x08);
         add_test ("je 80498d7 <main+0x367>", 6, 0x0f, 0x84, 0x38, 0x03, 0x00, 0x00);
         add_test ("mov $0x0,%eax", 5, 0xb8, 0x00, 0x00, 0x00, 0x00);
         add_test ("je +3", 2, 0x74, 0x10);
