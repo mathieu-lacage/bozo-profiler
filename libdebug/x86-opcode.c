@@ -270,7 +270,7 @@ x86_opcode0_is_Ib (uint8_t opcode0)
                 0x74, 0x75, 0x76, 0x77,
                 0x78, 0x79, 0x7a, 0x7b,
                 0x7c, 0x7d, 0x7e, 0x7f,
-                0xa2,
+                0xa2, 0xa8,
                 0xb0, 0xb1, 0xb2, 0xb3,
                 0xb4, 0xb5, 0xb6, 0xb7
         };
@@ -399,6 +399,20 @@ x86_opcode_get_displacement_size (struct x86_opcode_parser *parser)
                         disp_size = x86_wdw_operand_size (parser);
                 } else if (mod == 1) {
                         disp_size = 1;
+                } else if (x86_opcode_has_sib (parser)) {
+                        uint8_t base = parser->sib & 0x7;
+                        if (base == 5) {
+                                if (mod == 0 || mod == 2) {
+                                        disp_size = 4;
+                                } else if (mod == 1) {
+                                        disp_size = 1;
+                                } else {
+                                        assert (mod == 3);
+                                        disp_size = 0;
+                                }
+                        } else {
+                                disp_size = 0;
+                        }
                 } else {
                         disp_size = 0;
                 }
@@ -731,7 +745,7 @@ x86_opcode0_to_string (struct x86_opcode_parser *parser)
 void x86_opcode_print (struct x86_opcode_parser *parser)
 {
         if (parser->opcode0 == 0x0f) {
-                x86_opcode1_to_string (parser->opcode1);
+                printf ("%s\n", x86_opcode1_to_string (parser->opcode1));
         } else {
                 printf ("%s\n", x86_opcode0_to_string (parser));
         }
@@ -816,7 +830,9 @@ run_tests (void)
 
 int x86_opcode_run_self_tests (void)
 {
-        add_test ("movl   $0x804d760,(%esp)", 7, 0xc7, 0x04, 0x24, 0x60, 0xd7, 0x04, 0x08);
+        add_test ("test $0x1,%al", 2, 0xa8, 0x01);
+        add_test ("jmp *0x804c1b0(,%edx,4)", 7, 0xff, 0x24, 0x95, 0xb0, 0xc1, 0x04, 0x08);
+        add_test ("movl $0x804d760,(%esp)", 7, 0xc7, 0x04, 0x24, 0x60, 0xd7, 0x04, 0x08);
         add_test ("je 80498d7 <main+0x367>", 6, 0x0f, 0x84, 0x38, 0x03, 0x00, 0x00);
         add_test ("mov $0x0,%eax", 5, 0xb8, 0x00, 0x00, 0x00, 0x00);
         add_test ("je +3", 2, 0x74, 0x10);
