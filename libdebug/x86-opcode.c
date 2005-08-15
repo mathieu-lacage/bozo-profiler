@@ -620,6 +620,48 @@ x86_opcode_parse (struct x86_opcode_parser *parser,
 static char const *
 x86_opcode1_to_string (uint8_t opcode1)
 {
+        static char const *opcode1_to_string [] = {
+                "grp 6", "grp 7", "lar", "lsl", 
+                "invalid", "invalid", "clts", "invalid",
+                "invd", "wbinvd", "invalid", "illegal",
+                "invalid", "invalid", "invalid", "invalid",
+
+                "mov", "mov", "mov", "movlp", 
+                "unpcklp", "unpckhp", "movhp", "movhp",
+                "prefetch", "invalid", "invalid", "invalid",
+                "invalid", "invalid", "invalid", "invalid",
+
+                "mov", "mov", "mov", "mov",
+                "mov", "invalid", "mov", "invalid",
+                "movaps/d", "movaps/d", "cvtxxxxxx", "movntps",
+                "cvttxxxxx", "cvtxxxxxx", "ucomiss/d", "comiss/d"
+
+                "wrmsr", "rdtsc", "rdmsr", "rdpmc",
+                "sysenter", "sysexit", "invalid", "invalid",
+                "invalid", "invalid", "invalid", "invalid", 
+                "invalid", "invalid", "invalid", "invalid", 
+
+                "cmovo", "cmovno", "cmovb/c/nae", "cmovae/nb/nc",
+                "cmove/z", "cmovne/nz", "cmovbe/na", "cmova/nbe",
+                "cmovs", "cmovns", "cmovp/pe", "cmovnp/po",
+                "cmovl/nge", "cmovnl/ge", "cmovle/ng", "cmovnle/g"
+ 
+                "movmskp", "sqrt", "rsqrt", "rcp",
+                "andp", "andnp", "orp", "xorp",
+                "addxx", "mulxx", "cvtxxxx", "cvtxxx",
+                "subxx", "minxx", "divxx", "maxxx",
+
+                "punpcklbw", "punpcklwd", "punpckldq", "packsswb",
+                "pcmpgtb", "pcmpgtw", "pcmpgtd", "packuswb",
+                "punpckhbw", "punpckhwd", "punpckhdq", "packssdw",
+                "punpcklqdq", "punpckhqd", "movd", "movxx",
+
+                "pshufxx", "grp 12", "grp 13", "grp 14", 
+                "pcmpeqb", "pcmpeqw", "pcmpeqd", "emms",
+                "mmx", "mmx", "mmx", "mmx",
+                "mmx", "mmx", "movx", "movxx",
+                
+        };
         return "invalid two-byte opcode";
 }
 
@@ -735,6 +777,7 @@ x86_opcode0_to_string (struct x86_opcode_parser *parser)
                 assert (index < sizeof (opcode0_grp5_to_string));
                 return opcode0_grp5_to_string[index];
         } else if (opcode0 >= 0xd8 && opcode0 <= 0xdf) {
+                /* XXX */
                 return "esc";
         } else {
                 return opcode0_to_string[opcode0];
