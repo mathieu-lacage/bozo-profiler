@@ -83,6 +83,7 @@ test_opcode (int argc, char *argv[])
         total_read = 0;
         while (total_read < size && !x86_opcode_error (&parser)) {
                 uint32_t tmp_read = x86_opcode_parse (&parser, text_buffer, text_size);
+                printf ("%x\t", header.sh_addr + total_read);
                 total_read += tmp_read;
                 text_buffer += tmp_read;
                 text_size -= tmp_read;
