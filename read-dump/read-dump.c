@@ -202,22 +202,22 @@ symbol_to_string (struct output_formatting *out,
         char *filename_str;
         char *name_str;
         if (symbol->valid_fields & DWARF2_SYMBOL_FILENAME_OFFSET) {
-                filename_str = reader->buffer + symbol->filename_offset;
+                filename_str = (char *)reader->buffer + symbol->filename_offset;
         } else {
                 filename_str = NULL;
         }
         if (symbol->valid_fields & DWARF2_SYMBOL_NAME_OFFSET) {
-                name_str = reader->buffer + symbol->name_offset;
+                name_str = (char *)reader->buffer + symbol->name_offset;
         } else {
                 name_str = NULL;
         }
         if (symbol->valid_fields & DWARF2_SYMBOL_COMP_DIRNAME_OFFSET) {
-                comp_dirname_str = reader->buffer + symbol->comp_dirname_offset;
+                comp_dirname_str = (char *)reader->buffer + symbol->comp_dirname_offset;
         } else {
                 comp_dirname_str = NULL;
         }
         if (symbol->valid_fields & DWARF2_SYMBOL_DIRNAME_OFFSET) {
-                dirname_str = reader->buffer + symbol->dirname_offset;
+                dirname_str = (char *)reader->buffer + symbol->dirname_offset;
         } else {
                 dirname_str = NULL;
         }
@@ -264,7 +264,7 @@ elf32_symbol_to_string (struct output_formatting *out,
                         if (reader.reader.status < 0) {
                                 goto error1;
                         }
-                        real_name = reader.buffer + i.name_offset;
+                        real_name = (char const *)reader.buffer + i.name_offset;
                         retval = g_strdup_printf ("\"%s:%s\"", map->get_filename (map), real_name);
                         return retval;
                 }

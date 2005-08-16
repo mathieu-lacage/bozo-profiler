@@ -662,7 +662,7 @@ x86_opcode1_to_string (uint8_t opcode1)
                 "mmx", "mmx", "movx", "movxx",
                 
         };
-        return "invalid two-byte opcode";
+        return opcode1_to_string[opcode1];
 }
 
 static char const *

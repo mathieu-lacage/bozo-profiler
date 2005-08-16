@@ -106,7 +106,7 @@ symbol_iterate_definitions (struct load_map *map,
 
                         if (defined) {
                                 char const *real_name;
-                                real_name = reader.buffer + i.name_offset;
+                                real_name = (char const *)reader.buffer + i.name_offset;
                                 if (symbol_matches (real_name, name)) {
                                         int retval;
                                         retval = (*cb) (&i.symbol, address, name, context);
@@ -153,7 +153,7 @@ symbol_iterate_names (struct load_map *map, uint64_t address,
                 if (address >= i.symbol.st_value &&
                     address < i.symbol.st_value + i.symbol.st_size) {
                         char const *real_name;
-                        real_name = reader.buffer + i.name_offset;
+                        real_name = (char const *)reader.buffer + i.name_offset;
                         cb (&i.symbol, address, real_name, context);
                 }
                 elf32_symbol_iterator_next (&i, READER (&reader));

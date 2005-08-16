@@ -135,11 +135,11 @@ standard_opcode_noperands (struct dwarf2_line_cuh const *cuh,
 {
         uint32_t saved_offset;
 
+        saved_offset = reader->get_offset (reader);
+
         if (opcode >= cuh->opcode_base) {
                 goto error;
         }
-
-        saved_offset = reader->get_offset (reader);
 
         reader->seek (reader, CUH_LINE_STANDARD_OPCODE_LENGTHS_START (cuh));
         reader->skip (reader, opcode);
