@@ -660,6 +660,46 @@ x86_opcode1_to_string (uint8_t opcode1)
                 "pcmpeqb", "pcmpeqw", "pcmpeqd", "emms",
                 "mmx", "mmx", "mmx", "mmx",
                 "mmx", "mmx", "movx", "movxx",
+
+                "jo", "jno", "jbc/c/nae", "jae/nb/nc",
+                "je/z", "jne/nz", "jbe/na", "ja/nbe",
+                "js", "jns", "jp/pe", "jnp/po",
+                "jl/nge", "jnl/ge", "jle/ng", "jnle/g",
+
+                "seto", "setno", "setbc/c/nae", "setae/nb/nc",
+                "sete/z", "setne/nz", "setbe/na", "seta/nbe",
+                "sets", "setns", "setp/pe", "setnp/po",
+                "setl/nge", "setnl/ge", "setle/ng", "setnle/g",
+
+                "push %fs", "pop %fs", "cpuid", "bt",
+                "shld", "shld", "invalid", "invalid",
+                "push %gs", "pop %gs", "rsm", "bts",
+                "shrd", "shrd", "grp 15", "imul",
+
+                "cmpxchg", "cmpxchg", "lss", "btr",
+                "lfs", "lgs", "movzx", "movzx",
+                "invalid", "grp 10", "grp 8", "btc",
+                "bsf", "bsr", "movsx", "movsx",
+
+                "xadd", "xadd", "cmpxx", "movnti",
+                "pinsrw", "pextrw", "shufpx", "grp 9",
+                "bswap %eax", "bswap %ecx", "bswap %edx", "bswap %ebx",
+                "bswap %esp", "bswap %ebp", "bswap %esi", "bswap %edi", 
+
+                "invalid", "psrlw", "psrld", "psrlq", 
+                "paddq", "pmullq", "movqxxx", "pmovmskb",
+                "psubusb", "psubusw", "pminub", "pand",
+                "paddusb", "paddusw", "pmaxub", "pandn",
+
+                "pavgb", "psraw", "psrad", "pavgw", 
+                "pmulhuw", "pmulhw", "cvtxxxxx", "movntq/dq",
+                "psubsb", "psubsw", "pminsw", "por",
+                "paddsb", "paddsw", "pmaxsw", "pxor",
+
+                "invalid", "psllw", "pslld", "psllq",
+                "pmulludq", "pmaddwd", "psadbw", "maskmovqx",
+                "psubb", "psubw", "psubd", "paddb",
+                "paddb", "paddw", "paddd", "invalid"
                 
         };
         return opcode1_to_string[opcode1];
