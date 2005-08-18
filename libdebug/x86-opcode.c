@@ -618,8 +618,9 @@ x86_opcode_parse (struct x86_opcode_parser *parser,
 }
 
 static char const *
-x86_opcode1_to_string (uint8_t opcode1)
+x86_opcode1_to_string (struct x86_opcode_parser *parser)
 {
+        uint8_t opcode1 = parser->opcode1;
         static char const *opcode1_to_string [] = {
                 "grp 6", "grp 7", "lar", "lsl", 
                 "invalid", "invalid", "clts", "invalid",
@@ -702,6 +703,92 @@ x86_opcode1_to_string (uint8_t opcode1)
                 "paddb", "paddw", "paddd", "invalid"
                 
         };
+        static char const *opcode1_grp6_to_string [] = {
+                "sldt", "str", "lldt", "ltr", 
+                "verr", "verw", "invalid", "invalid"
+        };
+        static char const *opcode1_grp7_to_string [] = {
+                "sgdt", "sidt", "lgdt", "lidt",
+                "smsw", "invalid", "lmsw", "invlpg"
+        };
+        static char const *opcode1_grp8_to_string [] = {
+                "invalid", "invalid", "invalid", "invalid", 
+                "bt", "bts", "btr", "btc"
+        };
+        static char const *opcode1_grp14_to_string [] = {
+                "invalid", "invalid", "psrlq", "psrldq", 
+                "invalid", "invalid", "psllq", "pslldq"
+        };
+        static char const *opcode1_grp15_to_string [] = {
+                "fxsave", "fxrstor", "ldmxcsr", "stmxcsr",
+                "invalid", "lfence", "mfence", "clflush/sfence"
+        };
+        static char const *opcode1_grp16_to_string [] = {
+                "prefetch nta", "prefetch t0", "prefetch t1", "prefetch t2",
+                "invalid", "invalid", "invalid", "invalid"
+        };
+        uint8_t index = (parser->modrm >> 3) & 0x7;
+        if (opcode1 == 0) {
+                assert (index < sizeof (opcode1_grp6_to_string));
+                return opcode1_grp6_to_string[index];
+        } else if (opcode1 == 1) {
+                assert (index < sizeof (opcode1_grp7_to_string));
+                return opcode1_grp7_to_string[index];
+        } else if (opcode1 == 0xba) {
+                assert (index < sizeof (opcode1_grp8_to_string));
+                return opcode1_grp8_to_string[index];
+        } else if (opcode1 == 0xc7) {
+                if (index == 1) {
+                        return "cmpxch8b";
+                } else {
+                        return "invalid";
+                }
+        } else if (opcode1 == 0xb9) {
+                return "invalid";
+        } else if (opcode1 == 0x71) {
+                /* grp 12. */
+                if (index == 2) {
+                        return "psrlw";
+                } else if (index == 4) {
+                        return "psraw";
+                } else if (index == 6) {
+                        return "psllw";
+                } else {
+                        return "invalid";
+                }
+        } else if (opcode1 == 0x72) {
+                /* grp 13 */
+                if (index == 2) {
+                        return "psrld";
+                } else if (index == 4) {
+                        return "psrad";
+                } else if (index == 6) {
+                        return "pslld";
+                } else {
+                        return "invalid";
+                }
+        } else if (opcode1 == 0x73) {
+                /* grp 14 */
+                assert (index < sizeof (opcode1_grp14_to_string));
+                return opcode1_grp14_to_string[index];
+        } else if (opcode1 == 0xae) {
+                /* grp 15 */
+                uint8_t mod = (parser->modrm >> 6) & 0x3;
+                assert (index < sizeof (opcode1_grp15_to_string));
+                if (index == 7) {
+                        if (mod) {
+                                /* XXX */
+                        } else {
+                                /* XXX */
+                        }
+                } else {
+                        return opcode1_grp15_to_string[index];
+                }
+        } else if (opcode1 == 0x18) {
+                /* grp 16 */
+                assert (index < sizeof (opcode1_grp16_to_string));
+                return opcode1_grp16_to_string[index];
+        }
         return opcode1_to_string[opcode1];
 }
 
@@ -828,7 +915,7 @@ x86_opcode0_to_string (struct x86_opcode_parser *parser)
 void x86_opcode_print (struct x86_opcode_parser *parser)
 {
         if (parser->opcode0 == 0x0f) {
-                printf ("%s\n", x86_opcode1_to_string (parser->opcode1));
+                printf ("%s\n", x86_opcode1_to_string (parser));
         } else {
                 printf ("%s\n", x86_opcode0_to_string (parser));
         }
