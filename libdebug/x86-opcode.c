@@ -919,7 +919,6 @@ void x86_opcode_print (struct x86_opcode_parser *parser)
         } else {
                 printf ("%s\n", x86_opcode0_to_string (parser));
         }
-        //printf ("%s\n", x86_opcode_to_string (parser));
 }
 
 #ifdef RUN_SELF_TESTS
