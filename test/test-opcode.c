@@ -76,18 +76,15 @@ test_opcode (int argc, char *argv[])
         }
 
         text_buffer = data + header.sh_offset;
-        text_size = header.sh_size * header.sh_entsize;
-        printf ("entsize: %x\n", header.sh_entsize);
+        text_size = header.sh_size;
 
         x86_opcode_initialize (&parser, X86_MODE_32);
 
         total_read = 0;
         while (total_read < text_size && !x86_opcode_error (&parser)) {
                 uint32_t tmp_read = x86_opcode_parse (&parser, text_buffer, text_size);
-                printf ("%x\t", header.sh_addr + total_read);
                 total_read += tmp_read;
                 text_buffer += tmp_read;
-                text_size -= tmp_read;
                 x86_opcode_print (&parser);
         }
 
