@@ -464,6 +464,60 @@ int x86_opcode_ok (struct x86_opcode_parser *parser)
         }
 }
 
+int 
+x86_opcode_is_return (struct x86_opcode_parser *parser)
+{
+        uint8_t opcode0;
+        opcode0 = parser->opcode0;
+        if (opcode0 == 0xc2 ||
+            opcode0 == 0xc3 ||
+            opcode0 == 0xca ||
+            opcode0 == 0xcb ||
+            opcode0 == 0xcf) {
+                return 1;
+        }
+        return 0;
+}
+
+int 
+x86_opcode_is_call (struct x86_opcode_parser *parser)
+{
+        uint8_t opcode0;
+        opcode0 = parser->opcode0;
+        if (opcode0 == 0x9a ||
+            opcode0 == 0xe8) {
+                return 1;
+        } else if (opcode0 == 0xff) {
+                uint8_t mod = (parser->modrm >> 3) & 0x7;
+                if (mod == 2 || mod == 3) {
+                        return 1;
+                }
+        }
+        return 0;
+}
+
+int 
+x86_opcode_is_jump (struct x86_opcode_parser *parser)
+{
+        uint8_t h, l, opcode0;
+        opcode0 = parser->opcode0;
+        h = (opcode0 >> 4) & 0x0f;
+        l = opcode0 & 0x0f;
+        if (h == 0x07 ||
+            opcode0 == 0xe9 ||
+            opcode0 == 0xea ||
+            opcode0 == 0xeb) {
+                return 1;
+        } else if (opcode0 == 0xff) {
+                uint8_t mod = (parser->modrm >> 3) & 0x7;
+                if (mod == 4 || mod == 5) {
+                        return 1;
+                }
+        }
+        return 0;
+}
+
+
 uint32_t
 x86_opcode_parse (struct x86_opcode_parser *parser, 
                   uint8_t *buffer, uint32_t size)

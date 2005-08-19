@@ -74,6 +74,9 @@ uint32_t x86_opcode_parse (struct x86_opcode_parser *parser,
 
 int x86_opcode_ok (struct x86_opcode_parser *parser);
 int x86_opcode_error (struct x86_opcode_parser *parser);
+int x86_opcode_is_return (struct x86_opcode_parser *parser);
+int x86_opcode_is_call (struct x86_opcode_parser *parser);
+int x86_opcode_is_jump (struct x86_opcode_parser *parser);
 
 
 #ifdef RUN_SELF_TESTS
