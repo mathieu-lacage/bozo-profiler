@@ -72,8 +72,6 @@ void x86_opcode_initialize (struct x86_opcode_parser *parser, enum x86_mode_e);
 uint32_t x86_opcode_parse (struct x86_opcode_parser *parser, 
                            uint8_t *buffer, uint32_t size);
 
-void x86_opcode_print (struct x86_opcode_parser *parser);
-
 int x86_opcode_ok (struct x86_opcode_parser *parser);
 int x86_opcode_error (struct x86_opcode_parser *parser);
 

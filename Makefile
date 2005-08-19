@@ -21,6 +21,7 @@ LIBDEBUG_SRC = \
  libdebug/dwarf2-line.c \
  libdebug/timestamp.c \
  libdebug/x86-opcode.c \
+ libdebug/x86-opcode-print.c \
 
 
 LIBPROFILER_SRC= \

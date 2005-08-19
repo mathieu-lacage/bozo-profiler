@@ -28,6 +28,7 @@
 #include "elf32-parser.h"
 #include "memory-reader.h"
 #include "x86-opcode.h"
+#include "x86-opcode-print.h"
 
 int 
 test_opcode (int argc, char *argv[])
