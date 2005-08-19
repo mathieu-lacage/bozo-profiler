@@ -881,6 +881,27 @@ x86_opcode0_to_string (struct x86_opcode_parser *parser)
                 "inc", "dec", "calln", "callf", 
                 "jmpn", "jmpf", "push", "invalid"
         };
+        static char const *opcode0_esc_d8_0_to_string [] = {
+                "fadd", "fmul", "fcom", "fcomp",
+                "fsub", "fsubr", "fdiv", "fdivr"
+        };
+        static char const *opcode0_esc_d9_0_to_string [] = {
+                "fld", "invalid", "fst", "fstp",
+                "fldenv", "fldcw", "fstenv", "fstcw"
+        };
+        static char const *opcode0_esc_d9_1_to_string [] = {
+                "fld", "fld", "fld", "fld", 
+                "fld", "fld", "fld", "fld", 
+                "fxch", "fxch", "fxch", "fxch", 
+                "fxch", "fxch", "fxch", "fxch", 
+                
+                "fnop", "invalid", "invalid", "invalid", 
+                "invalid", "invalid", "invalid", "invalid", 
+                "invalid", "invalid", "invalid", "invalid", 
+                "invalid", "invalid", "invalid", "invalid", 
+
+                "fchs", "",
+        };
         uint8_t opcode0 = parser->opcode0;
         if (opcode0 >= 0x80 && opcode0 <= 0x83) {
                 uint8_t index = (parser->modrm >> 3) & 0x7;
@@ -903,8 +924,40 @@ x86_opcode0_to_string (struct x86_opcode_parser *parser)
                 uint8_t index = (parser->modrm >> 3) & 0x7;
                 assert (index < sizeof (opcode0_grp5_to_string));
                 return opcode0_grp5_to_string[index];
-        } else if (opcode0 >= 0xd8 && opcode0 <= 0xdf) {
-                /* XXX */
+        } else if (opcode0 == 0xd8) {
+                uint8_t modrm = parser->modrm;
+                uint8_t nnn = (modrm >> 3) & 0x7;
+                uint8_t h = (modrm >> 4) & 0x0f;
+                uint8_t l = modrm & 0x0f;
+                if (modrm <= 0xbf) {
+                        return opcode0_esc_d8_0_to_string[nnn];
+                } else if (h == 0x0c && l <= 0x07) {
+                        return "fadd";
+                } else if (h == 0x0c && l >= 0x08) {
+                        return "fcom";
+                } else if (h == 0x0d && l <= 0x07) {
+                        return "fsub";
+                } else if (h == 0x0d && l >= 0x08) {
+                        return "fdiv";
+                } else if (h == 0x0e && l <= 0x07) {
+                        return "fmul";
+                } else if (h == 0x0e && l >= 0x08) {
+                        return "fcomp";
+                } else if (h == 0x0f && l <= 0x07) {
+                        return "fsubr";
+                } else if (h == 0x0f && l >= 0x08) {
+                        return "fdivr";
+                } else {
+                        assert (false);
+                }
+        } else if (opcode0 == 0xd9) {
+                uint8_t modrm = parser->modrm;
+                uint8_t nnn = (modrm >> 3) & 0x7;
+                if (modrm <= 0xbf) {
+                        return opcode0_esc_d9_0_to_string[nnn];
+                } else if () {
+                }
+        } else if (opcode0 <= 0xdf) {
                 return "esc";
         } else {
                 return opcode0_to_string[opcode0];
