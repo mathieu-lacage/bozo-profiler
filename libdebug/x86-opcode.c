@@ -496,20 +496,22 @@ x86_opcode_is_call (struct x86_opcode_parser *parser)
 }
 
 int 
-x86_opcode_is_call_relative (struct x86_opcode_parser *parser)
+x86_opcode_is_call_relative (struct x86_opcode_parser *parser, int32_t *delta)
 {
         assert (x86_opcode_is_call (parser));
         if (parser->opcode0 == 0xe8) {
+                *delta = parser->immediate;
                 return 1;
         }
         return 0;
 }
 
 int 
-x86_opcode_is_call_absolute_direct (struct x86_opcode_parser *parser)
+x86_opcode_is_call_absolute_direct (struct x86_opcode_parser *parser, uint32_t *address)
 {
         assert (x86_opcode_is_call (parser));
         if (parser->opcode0 == 0x9a) {
+                *address = parser->immediate;
                 return 1;
         }
         return 0;
@@ -527,21 +529,24 @@ x86_opcode_is_call_absolute_indirect (struct x86_opcode_parser *parser)
 
 
 int 
-x86_opcode_is_jump_relative (struct x86_opcode_parser *parser)
+x86_opcode_is_jump_relative (struct x86_opcode_parser *parser, int32_t *delta)
 {
+        uint8_t opcode0 = parser->opcode0;
         assert (x86_opcode_is_jump (parser));
-        if (!x86_opcode_is_jump_absolute_direct (parser) &&
-            !x86_opcode_is_jump_absolute_indirect (parser)) {
+        if (opcode0 != 0xea &&
+            opcode0 != 0xff) {
+                *delta = parser->immediate;
                 return 1;
         }
         return 0;
 }
 int 
-x86_opcode_is_jump_absolute_direct (struct x86_opcode_parser *parser)
+x86_opcode_is_jump_absolute_direct (struct x86_opcode_parser *parser, uint32_t *address)
 {
         uint8_t opcode0 = parser->opcode0;
         assert (x86_opcode_is_jump (parser));
         if (opcode0 == 0xea) {
+                *address = parser->immediate;
                 return 1;
         }
         return 0;
