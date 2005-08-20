@@ -30,6 +30,12 @@
 #include "x86-opcode.h"
 #include "x86-opcode-print.h"
 
+static void
+report_bb_boundary (uint32_t address)
+{
+        printf ("%x\n", address);
+}
+
 int 
 test_opcode (int argc, char *argv[])
 {
@@ -84,6 +90,18 @@ test_opcode (int argc, char *argv[])
         total_read = 0;
         while (total_read < text_size && !x86_opcode_error (&parser)) {
                 uint32_t tmp_read = x86_opcode_parse (&parser, text_buffer, text_size);
+                if (x86_opcode_ok (&parser)) {
+                        if (x86_opcode_is_call (&parser)) {
+                                /* boundary right after the call. */
+                                report_bb_boundary (total_read + tmp_read);
+                        } else if (x86_opcode_is_return (&parser)) {
+                                /* boundary right after the return. */
+                                report_bb_boundary (total_read + tmp_read);
+                        } else if (x86_opcode_is_jump (&parser)) {
+                                /* this is the hard part. */
+                                /* boundary at the destination of the jump. */
+                        }
+                }
                 total_read += tmp_read;
                 text_buffer += tmp_read;
                 x86_opcode_print (&parser);

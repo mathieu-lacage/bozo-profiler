@@ -483,36 +483,76 @@ int
 x86_opcode_is_call (struct x86_opcode_parser *parser)
 {
         uint8_t opcode0;
+        uint8_t mod = (parser->modrm >> 3) & 0x7;
         opcode0 = parser->opcode0;
         if (opcode0 == 0x9a ||
             opcode0 == 0xe8) {
                 return 1;
-        } else if (opcode0 == 0xff) {
-                uint8_t mod = (parser->modrm >> 3) & 0x7;
-                if (mod == 2 || mod == 3) {
-                        return 1;
-                }
+        } else if (opcode0 == 0xff &&
+                   (mod == 2 || mod == 3)) {
+                return 1;
         }
         return 0;
 }
 
 int 
+x86_opcode_is_jump_relative (struct x86_opcode_parser *parser)
+{
+        assert (x86_opcode_is_jump (parser));
+        if (!x86_opcode_is_jump_absolute_direct (parser) &&
+            !x86_opcode_is_jump_absolute_indirect (parser)) {
+                return 1;
+        }
+        return 0;
+}
+int 
+x86_opcode_is_jump_absolute_direct (struct x86_opcode_parser *parser)
+{
+        uint8_t opcode0 = parser->opcode0;
+        assert (x86_opcode_is_jump (parser));
+        if (opcode0 == 0xea) {
+                return 1;
+        }
+        return 0;
+}
+int 
+x86_opcode_is_jump_absolute_indirect (struct x86_opcode_parser *parser)
+{
+        uint8_t opcode0 = parser->opcode0;
+        assert (x86_opcode_is_jump (parser));
+        if (opcode0 == 0xff) {
+                return 1;
+        }
+        return 0;
+}
+
+
+int 
 x86_opcode_is_jump (struct x86_opcode_parser *parser)
 {
-        uint8_t h, l, opcode0;
+        uint8_t h0, l0, h1, l1, opcode0, opcode1;
+        uint8_t mod = (parser->modrm >> 3) & 0x7;
         opcode0 = parser->opcode0;
-        h = (opcode0 >> 4) & 0x0f;
-        l = opcode0 & 0x0f;
-        if (h == 0x07 ||
+        opcode1 = parser->opcode1;
+        h0 = (opcode0 >> 4) & 0x0f;
+        l0 = opcode0 & 0x0f;
+        h1 = (opcode1 >> 4) & 0x0f;
+        l1 = opcode1 & 0x0f;
+        if (h0 == 0x07 ||
+            opcode0 == 0xe0 ||
+            opcode0 == 0xe1 ||
+            opcode0 == 0xe2 ||
+            opcode0 == 0xe3 ||
             opcode0 == 0xe9 ||
             opcode0 == 0xea ||
             opcode0 == 0xeb) {
                 return 1;
-        } else if (opcode0 == 0xff) {
-                uint8_t mod = (parser->modrm >> 3) & 0x7;
-                if (mod == 4 || mod == 5) {
-                        return 1;
-                }
+        } else if (opcode0 == 0xff &&
+                   (mod == 4 || mod == 5)) {
+                return 1;
+        } else if (opcode0 == 0x0f &&
+                   h1 == 0x08) {
+                return 1;
         }
         return 0;
 }

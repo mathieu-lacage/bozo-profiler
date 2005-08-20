@@ -76,7 +76,13 @@ int x86_opcode_ok (struct x86_opcode_parser *parser);
 int x86_opcode_error (struct x86_opcode_parser *parser);
 int x86_opcode_is_return (struct x86_opcode_parser *parser);
 int x86_opcode_is_call (struct x86_opcode_parser *parser);
+int x86_opcode_is_call_direct (struct x86_opcode_parser *parser);
+int x86_opcode_is_call_indirect (struct x86_opcode_parser *parser);
 int x86_opcode_is_jump (struct x86_opcode_parser *parser);
+int x86_opcode_is_jump_relative (struct x86_opcode_parser *parser);
+int x86_opcode_is_jump_absolute_direct (struct x86_opcode_parser *parser);
+int x86_opcode_is_jump_absolute_indirect (struct x86_opcode_parser *parser);
+
 
 
 #ifdef RUN_SELF_TESTS
