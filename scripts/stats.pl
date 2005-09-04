@@ -1,5 +1,7 @@
 #!/usr/bin/env perl
 
+use Storable;
+
 sub rank_distribution_dup
 {
     my %nodes = %{shift @_};
@@ -59,75 +61,6 @@ sub print_nodes
     print "\n";    
 }
 
-sub build_function_tree
-{
-    %nodes = ();
-
-    while (<>) {
-	/.*\/cvs\/([^\/]*)\/.*:(.*)\" -> .*\/cvs\/([^\/]*)\/.*:(.*)\"/;
-	my $source = $1;
-	my $source_fn = $2;
-	my $dest = $3;
-	my $dest_fn = $4;
-	if ($source_fn && $dest_fn) {
-	    $nodes{$source_fn}{'module'} = $source;
-	    $nodes{$dest_fn}{'module'} = $dest;
-	    $nodes{$source_fn}{'calls_to'}{$dest_fn}{'n'}++;
-	    $nodes{$dest_fn}{'calls_from'}{$source_fn}{'n'}++;
-	} else {
-	    $nodes{'unknown'}++;
-	}
-    }
-
-    return %nodes;
-}
-
-sub build_module_tree
-{
-    %nodes = ();
-
-    while (<>) {
-	if (/.*\/cvs\/([^\/]*)\/.*:(.*)\" -> .*\/cvs\/([^\/]*)\/.*:(.*)\"/) {
-	    my $source = $1;
-	    my $source_fn = $2;
-	    my $dest = $3;
-	    my $dest_fn = $4;
-	    if ($source_ && $dest) {
-		$nodes{$source}{'calls_to'}{$dest}{'n'}++;
-		$nodes{$dest}{'calls_from'}{$source}{'n'}++;
-	    } elsif ($source) {
-		$nodes{$source}{'calls_to'}{'unknown'}{'n'}++;
-	    } elsif ($dest) {
-		$nodes{$dest}{'calls_from'}{'unknown'}{'n'}++;
-	    }
-	}
-    }
-
-    return %nodes;
-}
-
-sub build_sub_module_tree
-{
-    $name = shift @_;
-    %nodes = ();
-
-    while (<>) {
-	if (/.*\/cvs\/([^\/]*)\/.*:(.*)\" -> .*\/cvs\/([^\/]*)\/.*:(.*)\"/) {
-	    my $source = $1;
-	    my $source_fn = $2;
-	    my $dest = $3;
-	    my $dest_fn = $4;
-	    if ($source eq $name && $dest eq $name) {
-		$nodes{$source_fn}{'module'} = $source;
-		$nodes{$dest_fn}{'module'} = $dest;
-		$nodes{$source_fn}{'calls_to'}{$dest_fn}{'n'}++;
-		$nodes{$dest_fn}{'calls_from'}{$source_fn}{'n'}++;
-	    }
-	}
-    }
-
-    return %nodes;
-}
 
 sub print_stats
 {
@@ -152,78 +85,67 @@ sub print_stats
 
 my %g_nodes = ();
 my $g_n_missed = 0;
-my $print_input = 0;
-my $print_input_dup = 0;
-my $print_output = 0;
-my $print_output_dup = 0;
+my $g_input = 'foo.dat';
+my $g_print_input = 0;
+my $g_print_input_dup = 0;
+my $g_print_output = 0;
+my $g_print_output_dup = 0;
 
 while (scalar @ARGV) {
     my $arg = shift @ARGV;
 
-    if ($arg =~ /--print-input-dup/) {
-	$print_input_dup = 1;
-	next;
-    }
-    if ($arg =~ /--print-input[^-]*/) {
-	$print_input = 1;
-	next;
-    }
-    if ($arg =~ /--print-output-dup/) {
-	$print_output_dup = 1;
-	next;
-    }
-    if ($arg =~ /--print-output[^-]/) {
-	$print_output = 1;
-	next;
-    }
-    if ($arg =~ /--print-both/) {
-	$print_output = 1;
-	$print_input = 1;
-	next;
-    }
-    if ($arg =~ /--help/) {
+    if ($arg =~ /--input/) {
+	$g_input = shift @ARGV;
+    } elsif ($arg =~ /--print-input[^-]*/) {
+	$g_print_input = 1;
+    } elsif ($arg =~ /--print-input-dup/) {
+	$g_print_input_dup = 1;
+    } elsif ($arg =~ /--print-output-dup/) {
+	$g_print_output_dup = 1;
+    } elsif ($arg =~ /--print-output[^-]*/) {
+	$g_print_output = 1;
+    } elsif ($arg =~ /--print-both/) {
+	$g_print_output = 1;
+	$g_print_input = 1;
+    } else {
 	print "options: \n";
 	print "\t--help\n";
+	print "\t--input [file]\n";
 	print "\t--print-input\n";
 	print "\t--print-input-dup\n";
 	print "\t--print-output\n";
 	print "\t--print-output-dup\n";
 	print "\t--print-both\n";
 	print "\t--print-none\n";
-	next;
+	exit (0);
     }
-
-    unshift @ARGV, $arg;
-    last;
 }
 
 
-%g_nodes = build_function_tree ();
-#%g_nodes = build_module_tree ();
-#%g_nodes = build_sub_module_tree ('nautilus');
+%g_nodes = %{retrieve ($g_input)};
 $g_n_missed = $g_nodes{'unknown'};
 
 print_stats (\%g_nodes, $g_n_missed);
 
-if ($print_input) {
+if ($g_print_input) {
     print "input\n";
     my %distribution = ();
     %distribution = rank_distribution (\%g_nodes, 'calls_from');
     print_distribution (\%distribution);
 }
-if ($print_input_dup) {
+if ($g_print_input_dup) {
     print "input dup\n";
     my %distribution_dup = ();
     %distribution_dup = rank_distribution_dup (\%g_nodes, 'calls_from');
     print_distribution (\%distribution_dup);
 }
-if ($print_output) {
+if ($g_print_output) {
     print "output\n"; 
     my %distribution = (); 
     %distribution = rank_distribution (\%g_nodes, 'calls_to');
     print_distribution (\%distribution);
 }
-if ($print_output_dup) {
+if ($g_print_output_dup) {
     print "output dup\n";
     my %distribution_dup = ();
     %distribution_dup = rank_distribution_dup (\%g_nodes, 'calls_to');

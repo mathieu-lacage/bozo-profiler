@@ -495,38 +495,6 @@ x86_opcode_is_call (struct x86_opcode_parser *parser)
         return 0;
 }
 
-int 
-x86_opcode_is_call_relative (struct x86_opcode_parser *parser, int32_t *delta)
-{
-        assert (x86_opcode_is_call (parser));
-        if (parser->opcode0 == 0xe8) {
-                *delta = parser->immediate;
-                return 1;
-        }
-        return 0;
-}
-
-int 
-x86_opcode_is_call_absolute_direct (struct x86_opcode_parser *parser, uint32_t *address)
-{
-        assert (x86_opcode_is_call (parser));
-        if (parser->opcode0 == 0x9a) {
-                *address = parser->immediate;
-                return 1;
-        }
-        return 0;
-}
-
-int 
-x86_opcode_is_call_absolute_indirect (struct x86_opcode_parser *parser)
-{
-        assert (x86_opcode_is_call (parser));
-        if (parser->opcode0 == 0xff) {
-                return 1;
-        }
-        return 0;
-}
-
 
 int 
 x86_opcode_is_jump_relative (struct x86_opcode_parser *parser, int32_t *delta)
