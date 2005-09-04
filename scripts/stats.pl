@@ -96,13 +96,13 @@ while (scalar @ARGV) {
 
     if ($arg =~ /--input/) {
 	$g_input = shift @ARGV;
-    } elsif ($arg =~ /--print-input[^-]*/) {
+    } elsif ($arg =~ /--print-input$/) {
 	$g_print_input = 1;
     } elsif ($arg =~ /--print-input-dup/) {
 	$g_print_input_dup = 1;
     } elsif ($arg =~ /--print-output-dup/) {
 	$g_print_output_dup = 1;
-    } elsif ($arg =~ /--print-output[^-]*/) {
+    } elsif ($arg =~ /--print-output$/) {
 	$g_print_output = 1;
     } elsif ($arg =~ /--print-both/) {
 	$g_print_output = 1;
