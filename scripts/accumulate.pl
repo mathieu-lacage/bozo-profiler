@@ -3,10 +3,11 @@
 my @data = ();
 
 while (<>) {
-    /([0-9]*) ([0-9\.e\-]*)/;
-    my $k = $1;
-    my $pk = $2;
-    push @data, {"k" => $k, "pk" => $pk};
+    if (/^([0-9]*) ([0-9\.e\-]*)/) {
+	my $k = $1;
+	my $pk = $2;
+	push @data, {"k" => $k, "pk" => $pk};
+    }
 }
 
 my @sorted = sort { ${$b}{"k"} <=> ${$a}{"k"} } @data;
