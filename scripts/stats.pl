@@ -68,18 +68,24 @@ sub print_stats
     my $n_missed = shift @_;
     my $n_single_edges = 0;
     my $n_weighted_edges = 0;
+    my $n_leaf = 0;
 
     for $node_source (keys %nodes) {
+	if ((scalar keys %{$nodes{$node_source}{'calls_to'}}) == 0) {
+	    $n_leaf++;
+	}
 	for $node_dest (keys %{$nodes{$node_source}{'calls_to'}}) {
 	    $n_weighted_edges++;
 	    $n_single_edges += $nodes{$node_source}{'calls_to'}{$node_dest}{'n'};
 	}
     }
 
-    print "n nodes: " . scalar (keys %nodes) . "\n";
+    my $n_nodes = scalar (keys %nodes);
+    print "n nodes: " . $n_nodes . "\n";
     print "n weighted edges: $n_weighted_edges\n";
     print "n single edges: $n_single_edges\n";
     print "n missed: $n_missed\n";
+    print "n leaf/n nodes: " . $n_leaf / $n_nodes . "\n";
 }
 
 
