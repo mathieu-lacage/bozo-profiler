@@ -4,20 +4,45 @@ use Storable;
 
 sub build_function_tree
 {
-    %nodes = ();
+    my %nodes = ();
 
     while (<>) {
-	/.*\/cvs\/([^\/]*)\/.*:(.*)\" -> .*\/cvs\/([^\/]*)\/.*:(.*)\"/;
-	my $source = $1;
-	my $source_fn = $2;
-	my $dest = $3;
-	my $dest_fn = $4;
-	if ($source_fn && $dest_fn) {
-	    $nodes{$source_fn}{'module'} = $source;
-	    $nodes{$dest_fn}{'module'} = $dest;
-	    $nodes{$source_fn}{'calls_to'}{$dest_fn}{'n'}++;
-	    $nodes{$dest_fn}{'calls_from'}{$source_fn}{'n'}++;
+	my $regex1 = ".*\/cvs\/([^\/]*)\/.*:(.*)\$";
+	my $regex2 = "([^:]*(:[^:]*)*):([^:]*)\$";
+	if (/\"([^\"]*)\" -> \"([^\"]*)\"[\t ]*(\[label=[0-9]+\])?;/) {
+	    my $a = $1;
+	    my $b = $2;
+	    my $source;
+	    my $source_fn;
+	    my $dest;
+	    my $dest_fn;
+	    if ($a =~ /$regex1/) {
+		$source = $1;
+		$source_fn = $2;
+	    } elsif ($a =~ /$regex2/) {
+		$source = $1;
+		$source_fn = $3;
+	    }
+	    if ($b =~ /$regex1/) {
+		$dest = $1;
+		$dest_fn = $2;
+	    } elsif ($b =~ /$regex2/) {
+		$dest = $1;
+		$dest_fn = $3;
+	    }
+	    if ($source_fn && $dest_fn) {
+		$nodes{$source_fn}{'module'} = $source;
+		$nodes{$dest_fn}{'module'} = $dest;
+		$nodes{$source_fn}{'calls_to'}{$dest_fn}{'n'}++;
+		$nodes{$dest_fn}{'calls_from'}{$source_fn}{'n'}++;
+	    } else {
+		print;
+		print $source_fn . "\n";
+		print $dest_fn . "\n";
+		$nodes{'unknown'}++;
+	    }
 	} else {
+		print;
 	    $nodes{'unknown'}++;
 	}
     }
