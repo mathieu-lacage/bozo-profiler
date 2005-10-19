@@ -3,10 +3,11 @@
 my @data = ();
 
 while (<>) {
-    if (/^([0-9]*) ([0-9\.e\-]*)/) {
+    if (/^([0-9]*) ([0-9\.e\-]*)(.*)$/) {
 	my $k = $1;
 	my $pk = $2;
-	push @data, {"k" => $k, "pk" => $pk};
+	my $comment = $3;
+	push @data, {"k" => $k, "pk" => $pk, "comment" => $comment};
     }
 }
 
@@ -17,6 +18,7 @@ my $pk_accumulated = 0;
 foreach $d (@sorted) {
     my $k = ${$d}{"k"};
     my $pk = ${$d}{"pk"};
+    my $comment = ${$d}{"comment"}; 
     $pk_accumulated += $pk;
-    print $k . " " . $pk_accumulated . "\n";
+    print $k . " " . $pk_accumulated . " " . $comment . "\n";
 }
