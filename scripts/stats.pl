@@ -96,6 +96,7 @@ my $g_print_input = 0;
 my $g_print_input_dup = 0;
 my $g_print_output = 0;
 my $g_print_output_dup = 0;
+my $g_print_sum = 0;
 
 while (scalar @ARGV) {
     my $arg = shift @ARGV;
@@ -113,6 +114,8 @@ while (scalar @ARGV) {
     } elsif ($arg =~ /--print-both/) {
 	$g_print_output = 1;
 	$g_print_input = 1;
+    } elsif ($arg =~ /--print-sum/) {
+	$g_print_sum = 1;
     } else {
 	print "options: \n";
 	print "\t--help\n";
@@ -122,6 +125,7 @@ while (scalar @ARGV) {
 	print "\t--print-output\n";
 	print "\t--print-output-dup\n";
 	print "\t--print-both\n";
+	print "\t--print-sum\n";
 	print "\t--print-none\n";
 	exit (0);
     }
@@ -137,7 +141,21 @@ if ($g_print_input) {
     print "input\n";
     my %distribution = ();
     %distribution = rank_distribution (\%g_nodes, 'calls_from');
-    print_distribution (\%distribution);
+    #print_distribution (\%distribution);
+    for $n (keys %distribution) {
+	my $node;
+	my @nodes = @{$distribution{$n}};
+	print $n . " " . scalar @nodes . " ";
+	my $output_avg = 0;
+	for $node (@nodes) {
+	    my $output = scalar keys %{$g_nodes{$node}{'calls_to'}};
+	    $output_avg += $output;
+	    printf ("%d ", $output);
+	}
+	$output_avg /= scalar @nodes;
+	#print "$output_avg \n";
+	print "\n";
+    }
 }
 if ($g_print_input_dup) {
     print "input dup\n";
@@ -149,11 +167,38 @@ if ($g_print_output) {
     print "output\n"; 
     my %distribution = (); 
     %distribution = rank_distribution (\%g_nodes, 'calls_to');
-    print_distribution (\%distribution);
+    #print_distribution (\%distribution);
+    for $n (keys %distribution) {
+	my $node;
+	my @nodes = @{$distribution{$n}};
+	my $n_nodes = scalar @nodes;
+	print $n . " " . $n_nodes . " ";
+	my $input_avg = 0;
+	for $node (@nodes) {
+	    my $input = scalar keys %{$g_nodes{$node}{'calls_from'}};
+	    $input_avg += $input;
+	    printf ("%d ", $input);
+	}
+	$input_avg /= $n_nodes;
+	#print " $input_avg \n";
+	print "\n";
+    }
 }
 if ($g_print_output_dup) {
     print "output dup\n";
     my %distribution_dup = ();
     %distribution_dup = rank_distribution_dup (\%g_nodes, 'calls_to');
     print_distribution (\%distribution_dup);
+}
+if ($g_print_sum) {
+    my %distribution_sum = ();
+    my $n_small = 0;
+    for $node (keys %g_nodes) {
+	my $n_output = scalar keys %{$g_nodes{$node}{'calls_to'}};
+	my $n_input = scalar keys %{$g_nodes{$node}{'calls_from'}};
+	my $both = $n_input - $n_output;
+	push @{$distribution_sum{$both}}, $node;
+    }
+    #printf ("oo: %d\n", $n_small);
+    print_distribution (\%distribution_sum);
 }
