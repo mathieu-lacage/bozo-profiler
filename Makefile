@@ -44,6 +44,7 @@ TEST_SRC= \
  test/test-profiler.c \
  test/test-circular-buffer.c \
  test/test-opcode.c \
+ test/test-dw2-bb.c \
 
 
 READ_DUMP_SRC= \

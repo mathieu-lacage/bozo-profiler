@@ -84,6 +84,16 @@ int dwarf2_line_state_for_address (struct dwarf2_line_cuh const *cuh,
                                    struct elf32_header const *elf32, 
                                    struct reader *reader);
 
+int dwarf2_line_get_bb_start (struct dwarf2_line_cuh const *cuh,
+                              struct dwarf2_line_machine_state *state,
+                              uint32_t ad_start, 
+                              uint32_t ad_end,
+                              void (*report_bb_start) (uint32_t, void *),
+                              void *user_data,
+                              struct elf32_header const *elf32, 
+                              struct reader *reader);
+
+
 /* 1 <= nfile <= cuh->nfile */
 int dwarf2_line_read_file_information (struct dwarf2_line_cuh const *cuh, 
                                        uint64_t file_index,

@@ -34,6 +34,7 @@ extern int test_performance (int argc, char *argv[]);
 extern int test_profiler (int argc, char *argv[]);
 extern int test_symbol (int argc, char *argv[]);
 extern int test_thread_db (int argc, char *argv[]);
+extern int test_dw2_bb (int argc, char *argv[]);
 
 
 
