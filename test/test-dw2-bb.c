@@ -25,8 +25,31 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <assert.h>
 
 #include "memory-reader.h"
+#include "dwarf2-line.h"
+
+struct bb_start_tmp {
+        bool basic_block;
+        uint64_t bb_ad;
+};
+
+static void 
+report_state (struct dwarf2_line_machine_state *state, void *data)
+{
+        struct bb_start_tmp *tmp = (struct bb_start_tmp *)data;
+        if (tmp->basic_block && 
+            (tmp->bb_ad != state->address ||
+             state->address == 0)) {
+                printf ("ad: 0x%llx\n", state->address);
+                tmp->basic_block = false;
+        }
+        if (state->basic_block) {
+                tmp->basic_block = true;
+                tmp->bb_ad = state->address;
+        }
+}
 
 
 int 
@@ -38,7 +61,7 @@ test_dw2_bb (int argc, char *argv[])
         uint32_t size;
         uint8_t *data;
         struct memory_reader reader;
-        struct memory_reader abbrev_reader;
+        struct bb_start_tmp tmp;
 
 
         fd = open (filename, O_RDONLY);
@@ -54,9 +77,9 @@ test_dw2_bb (int argc, char *argv[])
         size = stat_buf.st_size;
         data = mmap (0, stat_buf.st_size, PROT_READ, MAP_SHARED, fd, 0);
         memory_reader_initialize (&reader, data, size);
-        memory_reader_initialize (&abbrev_reader, data, size);
 
-	
+        tmp.basic_block = false;
+        dwarf2_line_get_all_states (report_state, &tmp, READER(&reader));
 
 
  error:

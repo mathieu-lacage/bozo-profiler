@@ -21,6 +21,7 @@
 #define DWARF2_LINE_H
 
 #include <stdint.h>
+#include <stdbool.h>
 #include "elf32-parser.h"
 #include "dwarf2-parser.h"
 #include "reader.h"
@@ -31,9 +32,12 @@ struct dwarf2_line_machine_state {
         uint64_t file;
         uint64_t line;
         uint64_t column;
-        mbool is_stmt;
-        mbool basic_block;
-        mbool end_sequence;
+        bool is_stmt;
+        bool basic_block;
+        bool end_sequence;
+        bool prologue_end;
+        bool epilogue_begin;
+        uint64_t isa;
 };
 
 /* see section 6.4.2 dwarf 2.0.0 p52 */
@@ -84,14 +88,9 @@ int dwarf2_line_state_for_address (struct dwarf2_line_cuh const *cuh,
                                    struct elf32_header const *elf32, 
                                    struct reader *reader);
 
-int dwarf2_line_get_bb_start (struct dwarf2_line_cuh const *cuh,
-                              struct dwarf2_line_machine_state *state,
-                              uint32_t ad_start, 
-                              uint32_t ad_end,
-                              void (*report_bb_start) (uint32_t, void *),
-                              void *user_data,
-                              struct elf32_header const *elf32, 
-                              struct reader *reader);
+int dwarf2_line_get_all_states (void (*report_state) (struct dwarf2_line_machine_state *, void *),
+                                void *user_data,
+                                struct reader *reader);
 
 
 /* 1 <= nfile <= cuh->nfile */

@@ -161,8 +161,6 @@ enum attr_form_e {
         DW_FORM_INDIRECT  = 0x16,
 };
 
-#define DW_LINE_OPCODE_FALSE (0)
-
 enum line_opcode_standard_e {
         DW_LNS_lne               = 0,
         DW_LNS_copy              = 1,
@@ -174,6 +172,9 @@ enum line_opcode_standard_e {
         DW_LNS_set_basic_block   = 7,
         DW_LNS_const_add_pc      = 8,
         DW_LNS_fixed_avance_pc   = 9,
+        DW_LNS_set_prologue_end  = 10,
+        DW_LNS_set_epilogue_begin = 11,
+        DW_LNS_set_isa           = 12,
 };
 
 enum line_opcode_extended_e {

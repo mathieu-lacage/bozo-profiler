@@ -106,6 +106,7 @@ int main (int argc, char *argv[])
         prepend_test ("profiler", NULL, test_profiler);
         prepend_test ("symbol", NULL, test_symbol);
         prepend_test ("thread_db", NULL, test_thread_db);
+        prepend_test ("dw2_bb", "[file]", test_dw2_bb);
 
         if (argc <= 1) {
                 printf ("usage: %s [test_name] [test_options]\n", argv[0]);

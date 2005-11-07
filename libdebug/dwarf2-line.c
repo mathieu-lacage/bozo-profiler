@@ -25,7 +25,7 @@
 #include "dwarf2-line.h"
 #include "dwarf2-constants.h"
 
-#define OPCODE_DEBUG 1
+#define noOPCODE_DEBUG 1
 #ifdef OPCODE_DEBUG
 #  define OPCODE_DEBUG_PRINTF(str, ...) \
      printf ("OPCODE -- " str, ## __VA_ARGS__);
@@ -43,24 +43,12 @@
   (CUH_LINE_INCLUDE_DIRECTORIES_START(cuh)+cuh->include_directories_length)
 #define CU_LINE_SIZE(cuh) (4 + cuh->length)
 
-
-int dwarf2_line_read_cuh (uint64_t stmt_list, 
-                          struct dwarf2_line_cuh *cuh,
-                          struct elf32_header const *elf32, 
-                          struct reader *reader)
+static void
+parse_cuh (struct dwarf2_line_cuh *cuh,
+           struct reader *reader)
 {
-        struct elf32_section_header debug_line_section;
         uint32_t include_directories_start, file_names_start;
         uint8_t b;
-
-        if (elf32_parser_read_section_by_name (elf32, ".debug_line", 
-                                               &debug_line_section,
-                                               reader) == -1) {
-                goto error;
-        }
-
-        reader->seek (reader, debug_line_section.sh_offset);
-        reader->skip (reader, stmt_list);
 
         cuh->offset = reader->get_offset (reader);
 
@@ -110,8 +98,27 @@ int dwarf2_line_read_cuh (uint64_t stmt_list,
         } while (b != 0);
         cuh->file_names_length = reader->get_offset (reader) -
                 file_names_start;
+}
 
 
+
+int dwarf2_line_read_cuh (uint64_t stmt_list, 
+                          struct dwarf2_line_cuh *cuh,
+                          struct elf32_header const *elf32, 
+                          struct reader *reader)
+{
+        struct elf32_section_header debug_line_section;
+
+        if (elf32_parser_read_section_by_name (elf32, ".debug_line", 
+                                               &debug_line_section,
+                                               reader) == -1) {
+                goto error;
+        }
+
+        reader->seek (reader, debug_line_section.sh_offset);
+        reader->skip (reader, stmt_list);
+
+        parse_cuh (cuh, reader);
         return 0;
  error:
         return -1;
@@ -126,8 +133,11 @@ init_line_machine (struct dwarf2_line_machine_state *state, struct dwarf2_line_c
         state->line = 1;
         state->column = 0;
         state->is_stmt = cuh->default_is_stmt;
-        state->basic_block = DW_LINE_OPCODE_FALSE;
-        state->end_sequence = DW_LINE_OPCODE_FALSE;
+        state->basic_block = false;
+        state->end_sequence = false;
+        state->prologue_end = false;
+        state->epilogue_begin = false;
+        state->isa = 0;
 }
 
 static int
@@ -228,7 +238,6 @@ dwarf2_line_parse_all (struct dwarf2_line_cuh const *cuh,
                        int (*callback) (struct dwarf2_line_machine_state *,
                                         void *),
                        void *callback_data,
-                       struct elf32_header const *elf32, 
                        struct reader *reader)
 {
         uint32_t end;
@@ -253,7 +262,7 @@ dwarf2_line_parse_all (struct dwarf2_line_cuh const *cuh,
                         extended_opcode = reader->read_u8 (reader);
                         switch (extended_opcode) {
                         case DW_LNE_end_sequence:
-                                state->end_sequence = !DW_LINE_OPCODE_FALSE;
+                                state->end_sequence = true;
                                 /* APPEND */
                                 init_line_machine (&new_state, cuh);
                                 OPCODE_DEBUG_PRINTF ("EXT end_sequence\n");
@@ -286,7 +295,9 @@ dwarf2_line_parse_all (struct dwarf2_line_cuh const *cuh,
                 } break;
                 case DW_LNS_copy:
                         /* APPEND */
-                        new_state.basic_block = DW_LINE_OPCODE_FALSE;
+                        new_state.basic_block = false;
+                        new_state.prologue_end = false;
+                        new_state.epilogue_begin = false;
                         OPCODE_DEBUG_PRINTF ("copy\n");
                         break;
                 case DW_LNS_advance_pc: {
@@ -319,7 +330,7 @@ dwarf2_line_parse_all (struct dwarf2_line_cuh const *cuh,
                         OPCODE_DEBUG_PRINTF ("negate_stmt %d\n", new_state.is_stmt);
                         break;
                 case DW_LNS_set_basic_block:
-                        new_state.basic_block = !DW_LINE_OPCODE_FALSE;
+                        new_state.basic_block = true;
                         OPCODE_DEBUG_PRINTF ("set_basic_block\n");
                         break;
                 case DW_LNS_const_add_pc: {
@@ -328,7 +339,7 @@ dwarf2_line_parse_all (struct dwarf2_line_cuh const *cuh,
                         adjusted_opcode = 255 - cuh->opcode_base;
                         delta = (adjusted_opcode) / cuh->line_range * 
                                 cuh->minimum_instruction_length;
-                        new_state.address += state->address + delta;
+                        new_state.address = state->address + delta;
                         OPCODE_DEBUG_PRINTF ("const_add_pc 0x%llx to 0x%llx\n", delta, new_state.address);
                 } break;
                 case DW_LNS_fixed_avance_pc: {
@@ -336,6 +347,19 @@ dwarf2_line_parse_all (struct dwarf2_line_cuh const *cuh,
                         operand = reader->read_u16 (reader);
                         new_state.address = state->address + operand;
                         OPCODE_DEBUG_PRINTF ("fixed_advance_pc %x to 0x%llx\n", operand, new_state.address);
+                } break;
+                case DW_LNS_set_prologue_end:
+                        new_state.prologue_end = true;
+                        OPCODE_DEBUG_PRINTF ("set_prologue_end to 0x%llx\n", new_state.address);
+                        break;
+                case DW_LNS_set_epilogue_begin:
+                        new_state.epilogue_begin = true;
+                        OPCODE_DEBUG_PRINTF ("set_epilogue_begin to 0x%llx\n", new_state.address);
+                        break;
+                case DW_LNS_set_isa: {
+                        uint64_t isa = reader->read_uleb128 (reader);
+                        new_state.isa = isa;
+                        OPCODE_DEBUG_PRINTF ("set_isa 0x%llx to 0x%llx\n", isa, new_state.address);
                 } break;
                 default:
                         if (opcode < cuh->opcode_base) {
@@ -366,13 +390,17 @@ dwarf2_line_parse_all (struct dwarf2_line_cuh const *cuh,
                                 new_state.line = state->line + delta_line;
                                 new_state.address = state->address + delta_address;
                                 /* APPEND */
-                                state->basic_block = DW_LINE_OPCODE_FALSE;
-                                OPCODE_DEBUG_PRINTF ("special opcode %u delta_line:%lld to %llu delta_address:0x%llx to 0x%llx\n", 
-                                                     adjusted_opcode, delta_line, new_state.line, delta_address, new_state.address);
+                                new_state.basic_block = false;
+                                new_state.prologue_end = false;
+                                new_state.epilogue_begin = false;
+                                OPCODE_DEBUG_PRINTF ("special opcode %u delta_line:%lld to %llu "
+                                                     "delta_address:0x%llx to 0x%llx\n", 
+                                                     adjusted_opcode, delta_line, new_state.line, 
+                                                     delta_address, new_state.address);
                         }
                         break;
                 }
-                if ((*callback) (state, callback_data)) {
+                if ((*callback) (&new_state, callback_data)) {
                         break;
                 }
                 *state = new_state;
@@ -418,54 +446,61 @@ dwarf2_line_state_for_address (struct dwarf2_line_cuh const *cuh,
         int retval = dwarf2_line_parse_all (cuh, state, 
                                             state_for_address_callback,
                                             &tmp,
-                                            elf32, reader);
+                                            reader);
         return retval;
 }
 
-struct bb_start_tmp {
-        uint32_t ad_start;
-        uint32_t ad_end;
-        void (*report_bb_start) (uint32_t, void *);
+
+struct all_states_tmp {
+        void (*report_state) (struct dwarf2_line_machine_state *, void *);
         void *user_data;
 };
 static int
-get_bb_start_callback (struct dwarf2_line_machine_state *state,
-                       void *user_data)
+all_states_callback (struct dwarf2_line_machine_state *state,
+                     void *user_data)
 {
-        struct bb_start_tmp *tmp = (struct bb_start_tmp *) user_data;
-        if (state->address >= tmp->ad_start &&
-            state->address < tmp->ad_end) {
-                if (state->basic_block) {
-                        (*tmp->report_bb_start) (state->address, tmp->user_data);
-                }
-                return 0;
-        } else if (state->address >= tmp->ad_end) {
-                return 1;
-        } else {
-                assert (false);
-                return -1;
-        }
+        struct all_states_tmp *tmp = (struct all_states_tmp *)user_data;
+        tmp->report_state (state, tmp->user_data);
+        return 0;
 }
 
+
 int 
-dwarf2_line_get_bb_start (struct dwarf2_line_cuh const *cuh,
-                          struct dwarf2_line_machine_state *state,
-                          uint32_t ad_start, 
-                          uint32_t ad_end,
-                          void (*report_bb_start) (uint32_t, void *),
-                          void *user_data,
-                          struct elf32_header const *elf32, 
-                          struct reader *reader)
+dwarf2_line_get_all_states (void (*report_state) (struct dwarf2_line_machine_state *, void *),
+                            void *user_data,
+                            struct reader *reader)
 {
-        struct bb_start_tmp tmp = {
-                ad_start,
-                ad_end,
-                report_bb_start,
-                user_data
-        };
-        int retval = dwarf2_line_parse_all (cuh, state, 
-                                            get_bb_start_callback,
-                                            &tmp,
-                                            elf32, reader);
-        return retval;        
+        struct elf32_section_header debug_line_section;
+        uint32_t end;
+        struct elf32_header elf32;
+
+        if (elf32_parser_initialize (&elf32, reader) == -1) {
+                goto error;
+        }
+        if (elf32_parser_read_section_by_name (&elf32, ".debug_line", 
+                                               &debug_line_section,
+                                               reader) == -1) {
+                goto error;
+        }
+
+        end = debug_line_section.sh_offset + debug_line_section.sh_size;
+        reader->seek (reader, debug_line_section.sh_offset);
+        while (reader->get_offset (reader) < end) {
+                struct dwarf2_line_machine_state state;
+                struct dwarf2_line_cuh cuh;
+                struct all_states_tmp tmp = {
+                        report_state,
+                        user_data
+                };
+                parse_cuh (&cuh, reader);
+                if (dwarf2_line_parse_all (&cuh, &state, 
+                                           all_states_callback,
+                                           &tmp,
+                                           reader) == -1) {
+                        goto error;
+                }
+                reader->seek (reader, cuh.offset + cuh.length + 4);
+        }
+ error:
+        return -1;
 }
