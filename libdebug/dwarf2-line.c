@@ -264,6 +264,9 @@ dwarf2_line_parse_all (struct dwarf2_line_cuh const *cuh,
                         case DW_LNE_end_sequence:
                                 state->end_sequence = true;
                                 /* APPEND */
+                                if ((*callback) (&new_state, callback_data)) {
+                                        goto out;
+                                }
                                 init_line_machine (&new_state, cuh);
                                 OPCODE_DEBUG_PRINTF ("EXT end_sequence\n");
                                 break;
@@ -295,6 +298,9 @@ dwarf2_line_parse_all (struct dwarf2_line_cuh const *cuh,
                 } break;
                 case DW_LNS_copy:
                         /* APPEND */
+                        if ((*callback) (&new_state, callback_data)) {
+                                goto out;
+                        }
                         new_state.basic_block = false;
                         new_state.prologue_end = false;
                         new_state.epilogue_begin = false;
@@ -390,6 +396,9 @@ dwarf2_line_parse_all (struct dwarf2_line_cuh const *cuh,
                                 new_state.line = state->line + delta_line;
                                 new_state.address = state->address + delta_address;
                                 /* APPEND */
+                                if ((*callback) (&new_state, callback_data)) {
+                                        goto out;
+                                }
                                 new_state.basic_block = false;
                                 new_state.prologue_end = false;
                                 new_state.epilogue_begin = false;
@@ -400,12 +409,10 @@ dwarf2_line_parse_all (struct dwarf2_line_cuh const *cuh,
                         }
                         break;
                 }
-                if ((*callback) (&new_state, callback_data)) {
-                        break;
-                }
                 *state = new_state;
         }
 
+ out:
         return 0;
  error:
         return -1;
