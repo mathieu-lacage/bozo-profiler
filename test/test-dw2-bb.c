@@ -49,6 +49,7 @@ test_dw2_bb (int argc, char *argv[])
         uint32_t size;
         uint8_t *data;
         struct memory_reader reader;
+        int retval;
 
 
         fd = open (filename, O_RDONLY);
@@ -65,8 +66,8 @@ test_dw2_bb (int argc, char *argv[])
         data = mmap (0, stat_buf.st_size, PROT_READ, MAP_SHARED, fd, 0);
         memory_reader_initialize (&reader, data, size);
 
-        dwarf2_line_get_all_rows (report_state, NULL, READER(&reader));
-        return 0;
+        retval = dwarf2_line_get_all_rows (report_state, NULL, READER(&reader));
+        return retval;
 
  error:
 	return -1;
