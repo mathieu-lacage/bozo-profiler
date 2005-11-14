@@ -65,8 +65,8 @@ test_dw2_bb (int argc, char *argv[])
         data = mmap (0, stat_buf.st_size, PROT_READ, MAP_SHARED, fd, 0);
         memory_reader_initialize (&reader, data, size);
 
-        dwarf2_line_get_all_states (report_state, NULL, READER(&reader));
-
+        dwarf2_line_get_all_rows (report_state, NULL, READER(&reader));
+        return 0;
 
  error:
 	return -1;

@@ -473,9 +473,9 @@ all_states_callback (struct dwarf2_line_machine_state *state,
 
 
 int 
-dwarf2_line_get_all_states (void (*report_state) (struct dwarf2_line_machine_state *, void *),
-                            void *user_data,
-                            struct reader *reader)
+dwarf2_line_get_all_rows (void (*report_state) (struct dwarf2_line_machine_state *, void *),
+                          void *user_data,
+                          struct reader *reader)
 {
         struct elf32_section_header debug_line_section;
         uint32_t end;

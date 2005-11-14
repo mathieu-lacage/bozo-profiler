@@ -88,9 +88,9 @@ int dwarf2_line_state_for_address (struct dwarf2_line_cuh const *cuh,
                                    struct elf32_header const *elf32, 
                                    struct reader *reader);
 
-int dwarf2_line_get_all_states (void (*report_state) (struct dwarf2_line_machine_state *, void *),
-                                void *user_data,
-                                struct reader *reader);
+int dwarf2_line_get_all_rows (void (*report_state) (struct dwarf2_line_machine_state *, void *),
+                              void *user_data,
+                              struct reader *reader);
 
 
 /* 1 <= nfile <= cuh->nfile */
