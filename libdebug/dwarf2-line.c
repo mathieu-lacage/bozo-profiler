@@ -508,6 +508,7 @@ dwarf2_line_get_all_rows (void (*report_state) (struct dwarf2_line_machine_state
                 }
                 reader->seek (reader, cuh.offset + cuh.length + 4);
         }
+        return 0;
  error:
         return -1;
 }
