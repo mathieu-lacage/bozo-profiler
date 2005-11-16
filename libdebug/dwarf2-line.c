@@ -21,7 +21,6 @@
 #include <stdbool.h>
 #include <assert.h>
 
-#include "dwarf2-parser.h"
 #include "dwarf2-line.h"
 #include "dwarf2-constants.h"
 
@@ -102,26 +101,12 @@ parse_cuh (struct dwarf2_line_cuh *cuh,
 
 
 
-int dwarf2_line_read_cuh (uint64_t stmt_list, 
-                          struct dwarf2_line_cuh *cuh,
-                          struct elf32_header const *elf32, 
-                          struct reader *reader)
+void dwarf2_line_read_cuh (uint64_t cuh_start, 
+                           struct dwarf2_line_cuh *cuh,
+                           struct reader *reader)
 {
-        struct elf32_section_header debug_line_section;
-
-        if (elf32_parser_read_section_by_name (elf32, ".debug_line", 
-                                               &debug_line_section,
-                                               reader) == -1) {
-                goto error;
-        }
-
-        reader->seek (reader, debug_line_section.sh_offset);
-        reader->skip (reader, stmt_list);
-
+        reader->seek (reader, cuh_start);
         parse_cuh (cuh, reader);
-        return 0;
- error:
-        return -1;
 }
 
 
@@ -232,13 +217,13 @@ int dwarf2_line_read_directory_name (struct dwarf2_line_cuh const *cuh,
 }
 
 
-static int
-dwarf2_line_parse_all (struct dwarf2_line_cuh const *cuh,
-                       struct dwarf2_line_machine_state *state,
-                       int (*callback) (struct dwarf2_line_machine_state *,
-                                        void *),
-                       void *callback_data,
-                       struct reader *reader)
+int
+dwarf2_line_read_all_rows (struct dwarf2_line_cuh const *cuh,
+                           struct dwarf2_line_machine_state *state,
+                           int (*callback) (struct dwarf2_line_machine_state *,
+                                            void *),
+                           void *callback_data,
+                           struct reader *reader)
 {
         uint32_t end;
         struct dwarf2_line_machine_state new_state;
@@ -418,97 +403,3 @@ dwarf2_line_parse_all (struct dwarf2_line_cuh const *cuh,
         return -1;
 }
 
-struct search_tmp {
-        uint32_t target_address;
-        bool found;
-};
-static int
-state_for_address_callback (struct dwarf2_line_machine_state *state,
-                            void *user_data)
-{
-        struct search_tmp *tmp = (struct search_tmp *) user_data;
-        if (tmp->found) {
-                return 1;
-        } else if (tmp->target_address == state->address) {
-                tmp->found = true;
-                return 0;
-        } else if (tmp->target_address < state->address) {
-                return 1;
-        } else {
-                assert (false);
-                return -1;
-        }
-}
-
-
-
-int
-dwarf2_line_state_for_address (struct dwarf2_line_cuh const *cuh,
-                               struct dwarf2_line_machine_state *state,
-                               uint32_t target_address, 
-                               struct elf32_header const *elf32, 
-                               struct reader *reader)
-{
-        struct search_tmp tmp = {target_address, false};
-        int retval = dwarf2_line_parse_all (cuh, state, 
-                                            state_for_address_callback,
-                                            &tmp,
-                                            reader);
-        return retval;
-}
-
-
-struct all_states_tmp {
-        void (*report_state) (struct dwarf2_line_machine_state *, void *);
-        void *user_data;
-};
-static int
-all_states_callback (struct dwarf2_line_machine_state *state,
-                     void *user_data)
-{
-        struct all_states_tmp *tmp = (struct all_states_tmp *)user_data;
-        tmp->report_state (state, tmp->user_data);
-        return 0;
-}
-
-
-int 
-dwarf2_line_get_all_rows (void (*report_state) (struct dwarf2_line_machine_state *, void *),
-                          void *user_data,
-                          struct reader *reader)
-{
-        struct elf32_section_header debug_line_section;
-        uint32_t end;
-        struct elf32_header elf32;
-
-        if (elf32_parser_initialize (&elf32, reader) == -1) {
-                goto error;
-        }
-        if (elf32_parser_read_section_by_name (&elf32, ".debug_line", 
-                                               &debug_line_section,
-                                               reader) == -1) {
-                goto error;
-        }
-
-        end = debug_line_section.sh_offset + debug_line_section.sh_size;
-        reader->seek (reader, debug_line_section.sh_offset);
-        while (reader->get_offset (reader) < end) {
-                struct dwarf2_line_machine_state state;
-                struct dwarf2_line_cuh cuh;
-                struct all_states_tmp tmp = {
-                        report_state,
-                        user_data
-                };
-                parse_cuh (&cuh, reader);
-                if (dwarf2_line_parse_all (&cuh, &state, 
-                                           all_states_callback,
-                                           &tmp,
-                                           reader) == -1) {
-                        goto error;
-                }
-                reader->seek (reader, cuh.offset + cuh.length + 4);
-        }
-        return 0;
- error:
-        return -1;
-}

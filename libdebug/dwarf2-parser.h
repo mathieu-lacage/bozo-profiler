@@ -21,6 +21,7 @@
 #define DWARF2_PARSER_H
 
 #include "reader.h"
+#include "dwarf2-line.h"
 #include <stdint.h>
 
 enum dwarf2_symbol_information_e {
@@ -30,7 +31,7 @@ enum dwarf2_symbol_information_e {
         DWARF2_SYMBOL_DIRNAME_OFFSET   = (1<<3),
         DWARF2_SYMBOL_COMP_DIRNAME_OFFSET   = (1<<4),
         DWARF2_SYMBOL_HIGH_PC          = (1<<5),
-        DWARF2_SYMBOL_LOW_PC           = (1<<6),
+        DWARF2_SYMBOL_LOW_PC           = (1<<6)
 };
 
 struct dwarf2_symbol_information {
@@ -78,5 +79,8 @@ struct dwarf2_symbol_information {
 int dwarf2_lookup (uint64_t address, struct dwarf2_symbol_information *symbol, 
                    struct reader *reader, struct reader *abbrev_reader);
 
+int dwarf2_parser_get_all_rows (void (*)(struct dwarf2_line_machine_state *, void *),
+                                void *data,
+                                struct reader *reader);
 
 #endif /* DWARF2_PARSER_H */

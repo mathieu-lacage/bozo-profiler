@@ -16,9 +16,12 @@ LIBDEBUG_SRC = \
  libdebug/utils-other.c \
  libdebug/load-map.c \
  libdebug/pthread-utils.c \
- libdebug/dwarf2-parser.c \
- libdebug/dwarf2-utils.c \
  libdebug/dwarf2-line.c \
+ libdebug/dwarf2-abbrev.c \
+ libdebug/dwarf2-aranges.c \
+ libdebug/dwarf2-info.c \
+ libdebug/dwarf2-utils.c \
+ libdebug/dwarf2-parser.c \
  libdebug/timestamp.c \
  libdebug/x86-opcode.c \
  libdebug/x86-opcode-print.c \
@@ -53,6 +56,10 @@ READ_DUMP_SRC= \
  read-dump/dwarf2-cache.c \
 
 
+DUMP_BB_SRC= \
+ dump-bb/main.c \
+
+
 
 #CC=$$HOME/bin/bin.linux2/insure
 ifdef USE_DEBUGGING_LIBC
@@ -70,12 +77,14 @@ LIBDEBUG_TARGET=$(OUTPUT_DIR)/libdebug/libdebug.a
 LIBDEBUG_PIC_TARGET=$(OUTPUT_DIR)/libdebug/libdebug-pic.a
 LIBPROFILER_TARGET=$(OUTPUT_DIR)/libprofiler/libprofiler.so
 READ_DUMP_TARGET=$(OUTPUT_DIR)/read-dump/read-dump
+DUMP_BB_TARGET=$(OUTPUT_DIR)/dump-bb/dump-bb
 
 TEST_OBJ=$(addprefix $(OUTPUT_DIR)/,$(addsuffix .o,$(basename $(TEST_SRC))))
 LIBDEBUG_OBJ=$(addprefix $(OUTPUT_DIR)/,$(addsuffix .o,$(basename $(LIBDEBUG_SRC))))
 LIBDEBUG_PIC_OBJ=$(addprefix $(OUTPUT_DIR)/,$(addsuffix -pic.o,$(basename $(LIBDEBUG_SRC))))
 LIBPROFILER_OBJ=$(addprefix $(OUTPUT_DIR)/,$(addsuffix .o,$(basename $(LIBPROFILER_SRC))))
 READ_DUMP_OBJ=$(addprefix $(OUTPUT_DIR)/,$(addsuffix .o,$(basename $(READ_DUMP_SRC))))
+DUMP_BB_OBJ=$(addprefix $(OUTPUT_DIR)/,$(addsuffix .o,$(basename $(DUMP_BB_SRC))))
 
 OBJ_FILES=$(TEST_OBJ) $(LIBDEBUG_OBJ) $(LIBDEBUG_PIC_OBJ) $(LIBPROFILER_OBJ) $(READ_DUMP_OBJ)
 
@@ -85,6 +94,7 @@ OUTPUT_DIRS= \
  $(OUTPUT_DIR)/libdebug \
  $(OUTPUT_DIR)/read-dump \
  $(OUTPUT_DIR)/libprofiler \
+ $(OUTPUT_DIR)/dump-bb \
 
 
 ALL_TARGETS = \
@@ -93,6 +103,7 @@ ALL_TARGETS = \
  $(LIBDEBUG_PIC_TARGET) \
  $(LIBPROFILER_TARGET) \
  $(READ_DUMP_TARGET) \
+ $(DUMP_BB_TARGET) \
  $(OUTPUT_DIR)/test/libtest-fn-address.so \
  $(OUTPUT_DIR)/test/libfoo.so \
  $(OUTPUT_DIR)/test/test \
@@ -107,6 +118,7 @@ $(LIBDEBUG_TARGET): $(LIBDEBUG_OBJ)
 $(LIBDEBUG_PIC_TARGET): $(LIBDEBUG_PIC_OBJ)
 $(LIBPROFILER_TARGET): $(LIBPROFILER_OBJ) $(LIBDEBUG_PIC_OBJ)
 $(READ_DUMP_TARGET): $(READ_DUMP_OBJ) $(LIBDEBUG_OBJ)
+$(DUMP_BB_TARGET): $(DUMP_BB_OBJ) $(LIBDEBUG_OBJ)
 
 $(LIBPROFILER_TARGET): LDLIBS += -L$(OUTPUT_DIR)/libdebug -ldebug-pic -lpthread -ldl
 $(READ_DUMP_TARGET): LDLIBS += -L$(OUTPUT_DIR)/libdebug -ldebug -ldl `pkg-config --libs glib-2.0`

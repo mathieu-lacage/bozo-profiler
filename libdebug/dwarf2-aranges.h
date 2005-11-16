@@ -16,14 +16,18 @@
   Copyright (C) 2004,2005  Mathieu Lacage
   Author: Mathieu Lacage <mathieu@gnu.org>
 */
-
-#ifndef DWARF2_UTILS
-#define DWARF2_UTILS
+#ifndef DWARF2_ARANGES_H
+#define DWARF2_ARANGES_H
 
 #include <stdint.h>
 
-char const *dwarf2_utils_attr_name_to_string (uint64_t name);
-char const *dwarf2_utils_tag_to_string (uint64_t tag);
+struct reader;
+
+int dwarf2_aranges_read_all (uint32_t start, 
+                             uint32_t end, 
+                             int (*callback) (uint32_t, uint32_t, void *),
+                             void *data,
+                             struct reader *reader);
 
 
-#endif /* DWARF2_UTILS */
+#endif /* DWARF2_ARANGES_H */
