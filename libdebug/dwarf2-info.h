@@ -20,11 +20,11 @@
 #ifndef DWARF2_INFO_H
 #define DWARF2_INFO_H
 
-struct reader;
 #include <stdint.h>
+#include <stdbool.h>
 #include "dwarf2-abbrev.h"
 
-
+struct reader;
 struct dwarf2_info {
         uint32_t info_start;   /* offset of start of .debug_info from start of file */
         uint32_t info_end;     /* offset of end of .debug_info from start of file */
@@ -62,6 +62,7 @@ enum dwarf2_info_entry_attr_e {
 struct dwarf2_info_entry {
         uint64_t tag;
         uint8_t children;
+        /* bitfield which specifies which fields below are valid. */
         int used;
         uint32_t stmt_list;
         uint32_t name_offset;
@@ -92,13 +93,13 @@ void dwarf2_info_cuh_read_entry_first (struct dwarf2_info_cuh *header,
                                        struct reader *reader);
 
 void dwarf2_info_cuh_read_entry (struct dwarf2_info_cuh *header,
-                                 uint32_t start_offset,
                                  struct dwarf2_info_entry *entry,
+                                 uint32_t start_offset,
                                  uint32_t *end_offset,
                                  struct reader *abbrev_reader,
                                  struct reader *reader);
-bool dwarf2_info_entry_is_last (uint32_t offset,
-                                struct reader *reader);
+bool dwarf2_info_cuh_entry_is_last (uint32_t offset,
+                                    struct reader *reader);
 
 
 #endif /* DWARF2_INFO_H */

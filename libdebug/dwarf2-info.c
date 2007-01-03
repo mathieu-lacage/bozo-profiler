@@ -273,15 +273,15 @@ dwarf2_info_cuh_read_entry_first (struct dwarf2_info_cuh *cuh,
                                   struct reader *abbrev_reader,
                                   struct reader *reader)
 {
-        dwarf2_info_cuh_read_entry (cuh, cuh->start,
-                                    entry, end_offset,
+        dwarf2_info_cuh_read_entry (cuh, entry, 
+                                    cuh->start, end_offset,
                                     abbrev_reader, reader);
 }
 
 void 
 dwarf2_info_cuh_read_entry (struct dwarf2_info_cuh *cuh,
-                            uint32_t start_offset,
                             struct dwarf2_info_entry *entry,
+                            uint32_t start_offset,
                             uint32_t *end_offset,
                             struct reader *abbrev_reader,
                             struct reader *reader)
@@ -343,9 +343,9 @@ void dwarf2_info_initialize (struct dwarf2_info *info,
 }
 
 
-bool 
-dwarf2_info_entry_is_last (uint32_t offset,
-                           struct reader *reader)
+bool
+dwarf2_info_cuh_entry_is_last (uint32_t offset,
+                               struct reader *reader)
 {
         uint32_t abbr_code;
         reader->seek (reader, offset);
