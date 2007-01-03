@@ -120,6 +120,8 @@ $(LIBPROFILER_TARGET): $(LIBPROFILER_OBJ) $(LIBDEBUG_PIC_OBJ)
 $(READ_DUMP_TARGET): $(READ_DUMP_OBJ) $(LIBDEBUG_OBJ)
 $(DUMP_BB_TARGET): $(DUMP_BB_OBJ) $(LIBDEBUG_OBJ)
 
+$(OUTPUT_DIR)/libprofiler/manager.o: CFLAGS+=-fno-strict-aliasing
+$(OUTPUT_DIR)/test/test-ld-brk.o: CFLAGS+=-fno-strict-aliasing
 $(LIBPROFILER_TARGET): LDLIBS += -L$(OUTPUT_DIR)/libdebug -ldebug-pic -lpthread -ldl
 $(READ_DUMP_TARGET): LDLIBS += -L$(OUTPUT_DIR)/libdebug -ldebug -ldl `pkg-config --libs glib-2.0`
 
