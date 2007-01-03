@@ -403,3 +403,40 @@ dwarf2_line_read_all_rows (struct dwarf2_line_cuh const *cuh,
         return -1;
 }
 
+struct search_tmp {
+        uint32_t target_address;
+        bool found;
+};
+static int
+state_for_address_callback (struct dwarf2_line_machine_state *state,
+                            void *user_data)
+{
+        struct search_tmp *tmp = (struct search_tmp *) user_data;
+        if (tmp->found) {
+                return 1;
+        } else if (tmp->target_address == state->address) {
+                tmp->found = true;
+                return 0;
+        } else if (tmp->target_address < state->address) {
+                return 1;
+        } else {
+                assert (false);
+                return -1;
+        }
+}
+
+
+
+int
+dwarf2_line_state_for_address (struct dwarf2_line_cuh const *cuh,
+                               struct dwarf2_line_machine_state *state,
+                               uint32_t target_address, 
+                               struct reader *reader)
+{
+        struct search_tmp tmp = {target_address, false};
+        int retval = dwarf2_line_read_all_rows (cuh, state, 
+                                                state_for_address_callback,
+                                                &tmp,
+                                                reader);
+        return retval;
+}

@@ -86,6 +86,12 @@ int dwarf2_line_read_all_rows (struct dwarf2_line_cuh const *cuh,
                                void *callback_data,
                                struct reader *reader);
 
+int dwarf2_line_state_for_address (struct dwarf2_line_cuh const *cuh,
+                                   struct dwarf2_line_machine_state *state,
+                                   uint32_t target_address, 
+                                   struct reader *reader);
+
+
 /* 1 <= nfile <= cuh->nfile */
 int dwarf2_line_read_file_information (struct dwarf2_line_cuh const *cuh, 
                                        uint64_t file_index,
