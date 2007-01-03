@@ -22,13 +22,14 @@
 
 #include "reader.h"
 #include <stdint.h>
+#include <stdbool.h>
 
 struct memory_reader {
         struct reader reader;
         uint8_t *buffer;
         uint32_t size;
         uint32_t current;
-        int lsb;
+        bool lsb;
 };
 
 void memory_reader_initialize (struct memory_reader *reader, uint8_t *buffer, uint32_t size);

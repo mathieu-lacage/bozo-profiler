@@ -20,7 +20,6 @@
 #include "reader.h"
 #include "memory-reader.h"
 #include <stdint.h>
-#include "mbool.h"
 
 #define no_DEBUG_REPORT
 
@@ -39,13 +38,13 @@
 static void
 memory_reader_set_msb  (struct memory_reader *reader)
 {
-        reader->lsb = FALSE;
+        reader->lsb = false;
 }
 
 static void 
 memory_reader_set_lsb  (struct memory_reader *reader)
 {
-        reader->lsb = TRUE;
+        reader->lsb = true;
 }
 
 static uint8_t 
@@ -231,7 +230,7 @@ memory_reader_read_sleb128 (struct reader *reader)
         uint8_t byte;
         result = 0;
         shift = 0;
-        while(TRUE) { 
+        while(true) { 
                 byte = reader->read_u8 (reader);
                 result |= (((uint64_t)(byte & 0x7f)) << shift); 
                 shift += 7; /* sign bit of byte is 2nd high order bit (0x40) */ 
