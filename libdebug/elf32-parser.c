@@ -19,12 +19,12 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <stdbool.h>
 
 #include "elf32-parser.h"
 #include "elf32-debug.h"
 #include "elf32-constants-private.h"
 #include "reader.h"
-#include "mbool.h"
 
 #define noERROR_REPORT
 
@@ -315,16 +315,16 @@ read_section_header_by_type (struct elf32_header const *elf32_header,
         return 0;
 }
 
-mbool 
+bool 
 elf32_symbol_iterator_has_next (struct elf32_symbol_iterator *i)
 {
         uint32_t nsymbols;
         nsymbols = i->symtab_section_header.sh_size / 
                 i->symtab_section_header.sh_entsize;
         if (i->i < nsymbols) {
-                return TRUE;
+                return true;
         } else {
-                return FALSE;
+                return false;
         }
         
 }
@@ -406,21 +406,21 @@ compare_string (char const *name, struct reader *reader)
         char c;
         
         j = 0;
-        found = FALSE;
+        found = false;
         c = (char) reader->read_u8 (reader);
         while (c != 0 && name[j] != 0) {
                 /*printf ("%c -- %c\n", c, name[j]);*/
                 if (c != name[j]) {
-                        found = FALSE;
+                        found = false;
                         break;
                 } else {
-                        found = TRUE;
+                        found = true;
                 }
                 c = (char) reader->read_u8 (reader);
                 j++;
         }
         if (c != name[j]) {
-                found = FALSE;
+                found = false;
         }
         return found;
 }

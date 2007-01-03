@@ -22,7 +22,7 @@
 
 #include <stdint.h>
 #include "reader.h"
-#include "mbool.h"
+#include <stdbool.h>
 
 #define ELF32_ST_TYPE(i)   ((i)&0xf)
 
@@ -140,7 +140,7 @@ struct elf32_symbol_iterator {
 int   elf32_symbol_iterator_initialize (struct elf32_header *elf32, 
                                         struct elf32_symbol_iterator *i,
                                         struct reader *reader);
-mbool elf32_symbol_iterator_has_next (struct elf32_symbol_iterator *i); 
+bool elf32_symbol_iterator_has_next (struct elf32_symbol_iterator *i); 
 int   elf32_symbol_iterator_next     (struct elf32_symbol_iterator *i, struct reader *reader); 
 int   elf32_symbol_iterator_first    (struct elf32_symbol_iterator *i, struct reader *reader); 
 
