@@ -21,10 +21,13 @@
 #include "elf32-parser.h"
 #include "dwarf2-constants.h"
 #include "dwarf2-line.h"
+#include "dwarf2-info.h"
+#include "dwarf2-aranges.h"
 
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <stdbool.h>
 
 #define nopeABBREV_DEBUG 1
 #ifdef ABBREV_DEBUG
@@ -35,6 +38,55 @@
 #endif
 
 
+static int
+update_file_and_directory_information (struct dwarf2_line_cuh const *line_cuh, 
+                                       uint64_t file_index, 
+                                       struct dwarf2_symbol_information *symbol,
+                                       struct reader *reader)
+{
+        struct dwarf2_line_file_information file;
+        if (dwarf2_line_read_file_information (line_cuh,
+                                               file_index, 
+                                               &file, reader) == -1) {
+                goto error;
+        }
+        symbol->valid_fields |= DWARF2_SYMBOL_FILENAME_OFFSET;
+        symbol->filename_offset = file.name_offset;
+        if (file.directory_index != 0) {
+                uint32_t dirname_offset;
+                if (dwarf2_line_read_directory_name (line_cuh, 
+                                                     file.directory_index, 
+                                                     &dirname_offset,
+                                                     reader) == -1) {
+                        goto error;
+                }
+                symbol->valid_fields |= DWARF2_SYMBOL_DIRNAME_OFFSET;
+                symbol->dirname_offset = dirname_offset;
+        }
+
+        return 0;
+ error:
+        return -1;
+}
+
+struct aranges_lookup_data {
+        uint32_t target_address;
+        uint32_t cuh_offset;
+        bool found;
+};
+
+static int 
+aranges_cb (uint32_t cuh_offset, uint32_t start, uint32_t size, void *context)
+{
+        struct aranges_lookup_data *data = (struct aranges_lookup_data *)context;
+        if (data->target_address > start &&
+            data->target_address <= start + size) {
+                data->cuh_offset = cuh_offset;
+                data->found = true;
+                return 1;
+        }
+        return 0;
+}
         
 int 
 dwarf2_lookup (uint64_t target_address, 
@@ -42,7 +94,152 @@ dwarf2_lookup (uint64_t target_address,
                struct reader *abbrev_reader,
                struct reader *reader)
 {
+        struct elf32_section_header section_header;
+        struct elf32_header elf32;
+        uint32_t aranges_start, aranges_end;
+        struct aranges_lookup_data aranges_cb_context;
+        uint32_t cuh_start;
+        uint32_t info_start, info_end;
+        uint32_t str_start;
+        uint32_t abbrev_start, abbrev_end;
+        struct dwarf2_info info;
+        struct dwarf2_info_cuh cuh;
+        struct dwarf2_info_entry cuh_entry;
+        uint32_t current;
+        bool found_stmt_list = false;
+        uint32_t stmt_list = 0;
+        
+        if (elf32_parser_initialize (&elf32, reader) == -1) {
+                printf ("elf32 init error\n");
+                goto error;
+        }
+
+        
+        if (elf32_parser_read_section_by_name (&elf32, ".debug_aranges", 
+                                               &section_header,
+                                               reader) == -1) {
+                goto error;
+        }
+        aranges_start = section_header.sh_offset;
+        aranges_end = aranges_start + section_header.sh_size;
+        aranges_cb_context.found = false;
+        aranges_cb_context.target_address = target_address;
+        if (dwarf2_aranges_read_all (aranges_start,
+                                     aranges_end,
+                                     aranges_cb,
+                                     &aranges_cb_context,
+                                     reader) == -1) {
+                goto error;
+        }
+        if (!aranges_cb_context.found) {
+                goto error;
+        }
+        cuh_start = aranges_cb_context.cuh_offset;
+
+
+        if (elf32_parser_read_section_by_name (&elf32, ".debug_info", 
+                                               &section_header,
+                                               reader) == -1) {
+                goto error;
+        }
+        info_start = section_header.sh_offset;
+        info_end = section_header.sh_offset + section_header.sh_size;
+
+        if (elf32_parser_read_section_by_name (&elf32, ".debug_str", 
+                                               &section_header,
+                                               reader) == -1) {
+                goto error;
+        }
+        str_start = section_header.sh_offset;
+
+        if (elf32_parser_read_section_by_name (&elf32, ".debug_abbrev", 
+                                               &section_header,
+                                               reader) == -1) {
+                goto error;
+        }
+        abbrev_start = section_header.sh_offset;
+        abbrev_end = section_header.sh_offset + section_header.sh_size;
+        
+        dwarf2_info_initialize (&info, info_start, info_end,
+                                str_start, abbrev_start, abbrev_end);
+        dwarf2_info_read_cuh (&info, &cuh, cuh_start, reader);
+        dwarf2_info_cuh_read_entry_first (&cuh, &cuh_entry, &current, abbrev_reader, reader);
+        do {
+                dwarf2_info_cuh_read_entry (&cuh, &cuh_entry, current, &current, 
+                                            abbrev_reader, reader);
+                if (cuh_entry.tag == DW_TAG_COMPILE_UNIT) {
+                        if (cuh_entry.used & DW2_INFO_ATTR_STMT_LIST) {
+                                found_stmt_list = true;
+                                stmt_list = cuh_entry.stmt_list;
+                        } 
+                        if (cuh_entry.used & DW2_INFO_ATTR_COMP_DIRNAME_OFFSET) {
+                                symbol->valid_fields |= DWARF2_SYMBOL_COMP_DIRNAME_OFFSET;
+                                symbol->comp_dirname_offset = cuh_entry.comp_dirname_offset;
+                        }
+                } else if (cuh_entry.used & DW2_INFO_ATTR_HIGH_PC &&
+                           cuh_entry.used & DW2_INFO_ATTR_LOW_PC &&
+                           target_address >= cuh_entry.low_pc &&
+                           target_address < cuh_entry.high_pc) {
+                        symbol->valid_fields |= DWARF2_SYMBOL_HIGH_PC;
+                        symbol->valid_fields |= DWARF2_SYMBOL_LOW_PC;
+                        symbol->high_pc = cuh_entry.high_pc;
+                        symbol->low_pc = cuh_entry.low_pc;
+                        goto ok;
+                }
+        } while (!dwarf2_info_cuh_entry_is_last (current, reader));
+
+        return -1;
+ ok:
+        if (cuh_entry.used & DW2_INFO_ATTR_NAME_OFFSET) {
+                symbol->valid_fields |= DWARF2_SYMBOL_NAME_OFFSET;
+                symbol->name_offset = cuh_entry.name_offset;
+        } else {
+                if (cuh_entry.used & DW2_INFO_ATTR_ABSTRACT_ORIGIN) {
+                        dwarf2_info_cuh_read_entry (&cuh, &cuh_entry, 
+                                                    cuh_entry.abstract_origin,
+                                                    &current, abbrev_reader, reader);
+                } 
+                if (cuh_entry.used & DW2_INFO_ATTR_SPECIFICATION) {
+                        dwarf2_info_cuh_read_entry (&cuh, &cuh_entry, 
+                                                    cuh_entry.specification,
+                                                    &current, abbrev_reader, reader);
+                }
+                if (cuh_entry.used & DW2_INFO_ATTR_NAME_OFFSET) {
+                        symbol->valid_fields |= DWARF2_SYMBOL_NAME_OFFSET;
+                        symbol->name_offset = cuh_entry.name_offset;
+                }
+        }
+
+        if (found_stmt_list) {
+                struct dwarf2_line_cuh line_cuh;
+                struct dwarf2_line_machine_state state;
+                if (elf32_parser_read_section_by_name (&elf32, ".debug_line", 
+                                                       &section_header,
+                                                       reader) == -1) {
+                        goto end;
+                }
+                uint64_t stmt_list_start = section_header.sh_offset + stmt_list;
+
+                dwarf2_line_read_cuh (stmt_list_start, &line_cuh, reader);
+                if (dwarf2_line_state_for_address (&line_cuh, &state, 
+                                                   target_address,
+                                                   reader) == -1) {
+                        goto end;
+                }
+                symbol->valid_fields |= DWARF2_SYMBOL_LINE;
+                symbol->line = state.line;
+                if (update_file_and_directory_information (&line_cuh, 
+                                                           state.file, 
+                                                           symbol, 
+                                                           reader) == -1) {
+                        goto end;
+                }
+        }
+        
+ end:
         return 0;
+ error:
+        return -1;
 }
 
 struct all_states_tmp {
@@ -102,236 +299,3 @@ dwarf2_parser_get_all_rows (void (*callback)(struct dwarf2_line_machine_state *,
 }
 
 
-#if 0
-
-        struct dwarf2_lookup_data data;
-        struct abbrev_attributes abbrev_attributes;
-        mbool found_stmt_list;
-        uint64_t stmt_list;
-
-        symbol->valid_fields = 0;
-        stmt_list = 0;
-        found_stmt_list = FALSE;
-
-        if (dwarf2_lookup_data_initialize (&data, target_address, abbrev_reader, reader) == -1) {
-                goto error;
-        }
-
-        reader->seek (reader, cuh_end (&data));
-        while (reader->get_offset (reader) < cu_end (&data)) {
-                uint64_t abbr_code, tag;
-                uint8_t children;
-                uint32_t abbrev_offset;
-                abbr_code = reader->read_uleb128 (reader);
-                if (abbr_code == 0) {
-                        /* I _believe_ this might be the end of the CU. */
-                        continue;
-                }
-
-                /* goto this abbr code. */
-                if (abbrev_code_to_abbrev_offset (&data, 
-                                                  abbr_code, 
-                                                  &abbrev_offset,
-                                                  abbrev_reader) == -1) {
-                        goto error;
-                }
-                abbrev_reader->seek (abbrev_reader, abbrev_offset);
-                abbrev_reader->read_uleb128 (abbrev_reader);
-
-                tag = abbrev_reader->read_uleb128 (abbrev_reader);
-                children = abbrev_reader->read_u8 (abbrev_reader);
-
-                read_attributes (&data,
-                                 &abbrev_attributes, 
-                                 abbrev_reader, 
-                                 reader);
-                
-                if (tag == DW_TAG_COMPILE_UNIT) {
-                        if (abbrev_attributes.used & ABBREV_ATTR_STMT_LIST) {
-                                found_stmt_list = TRUE;
-                                stmt_list = abbrev_attributes.stmt_list;
-                        } 
-                        if (abbrev_attributes.used & ABBREV_ATTR_COMP_DIRNAME_OFFSET) {
-                                symbol->valid_fields |= DWARF2_SYMBOL_COMP_DIRNAME_OFFSET;
-                                symbol->comp_dirname_offset = abbrev_attributes.comp_dirname_offset;
-                        }
-                } else if (abbrev_attributes.used & (ABBREV_ATTR_HIGH_PC | ABBREV_ATTR_LOW_PC) &&
-                           target_address >= abbrev_attributes.low_pc &&
-                           target_address < abbrev_attributes.high_pc) {
-                        goto ok;
-                }
-        }
- error:
-        return -1;
-
- ok:
-#if 0
-        printf ("fields: %x, low: %llx, high: %llx -- target: %llx\n", abbrev_attributes.used,
-                abbrev_attributes.low_pc, abbrev_attributes.high_pc, target_address);
-#endif
-        symbol->valid_fields |= DWARF2_SYMBOL_HIGH_PC;
-        symbol->high_pc = abbrev_attributes.high_pc;
-        symbol->valid_fields |= DWARF2_SYMBOL_LOW_PC;
-        symbol->low_pc = abbrev_attributes.low_pc;
-
-        if (abbrev_attributes.used & ABBREV_ATTR_NAME_OFFSET) {
-                symbol->valid_fields |= DWARF2_SYMBOL_NAME_OFFSET;
-                symbol->name_offset = abbrev_attributes.name_offset;
-        } else {
-                if (abbrev_attributes.used & ABBREV_ATTR_ABSTRACT_ORIGIN) {
-                        if (read_abbrev_entry (&data,
-                                               abbrev_attributes.abstract_origin,
-                                               &abbrev_attributes,
-                                               abbrev_reader, reader) == -1) {
-                                goto error;
-                        }
-                } 
-                if (abbrev_attributes.used & ABBREV_ATTR_SPECIFICATION) {
-                        if (read_abbrev_entry (&data,
-                                               abbrev_attributes.specification,
-                                               &abbrev_attributes,
-                                               abbrev_reader, reader) == -1) {
-                                goto error;
-                        }
-                        if (abbrev_attributes.used & ABBREV_ATTR_NAME_OFFSET) {
-                                symbol->valid_fields |= DWARF2_SYMBOL_NAME_OFFSET;
-                                symbol->name_offset = abbrev_attributes.name_offset;
-                        }
-                }
-        }
-
-        if (found_stmt_list) {
-                struct dwarf2_line_cuh line_cuh;
-                struct dwarf2_line_machine_state state;
-                if (dwarf2_line_read_cuh (stmt_list, &line_cuh, &data.elf32, reader) == -1) {
-                        goto error;
-                }
-                if (dwarf2_line_state_for_address (&line_cuh, &state, 
-                                                   target_address,
-                                                   &data.elf32, reader) == -1) {
-                        goto error;
-                }
-                symbol->valid_fields |= DWARF2_SYMBOL_LINE;
-                symbol->line = state.line;
-                if (update_file_and_directory_information (&line_cuh, 
-                                                           state.file, 
-                                                           symbol, 
-                                                           reader) == -1) {
-                        goto error;
-                }
-        }
-
-        if (reader->status == -1 ||
-            abbrev_reader->status == -1) {
-                goto error;
-        }
-        
-        return 0;
-
-
-
-static uint32_t 
-cu_start (struct dwarf2_lookup_data const *data)
-{
-        uint32_t start;
-        start = data->debug_info_start + data->cu_offset;
-        return start;        
-}
-
-static uint32_t 
-cu_end (struct dwarf2_lookup_data const *data)
-{
-        uint32_t end;
-        end = cu_start (data) + 4 + data->cuh.length;
-        return end;
-}
-
-static uint32_t 
-cuh_start (struct dwarf2_lookup_data const *data)
-{
-        uint32_t start;
-        start = cu_start (data);
-        return start;
-}
-
-static uint32_t 
-cuh_end (struct dwarf2_lookup_data const *data)
-{
-        uint32_t start;
-        start = cuh_start (data) + 4 + 2 + 4 + 1;
-        return start;
-}
-
-
-static int
-update_file_and_directory_information (struct dwarf2_line_cuh const *line_cuh, 
-                                       uint64_t file_index, 
-                                       struct dwarf2_symbol_information *symbol,
-                                       struct reader *reader)
-{
-        struct dwarf2_line_file_information file;
-        if (dwarf2_line_read_file_information (line_cuh,
-                                               file_index, 
-                                               &file, reader) == -1) {
-                goto error;
-        }
-        symbol->valid_fields |= DWARF2_SYMBOL_FILENAME_OFFSET;
-        symbol->filename_offset = file.name_offset;
-        if (file.directory_index != 0) {
-                uint32_t dirname_offset;
-                if (dwarf2_line_read_directory_name (line_cuh, 
-                                                     file.directory_index, 
-                                                     &dirname_offset,
-                                                     reader) == -1) {
-                        goto error;
-                }
-                symbol->valid_fields |= DWARF2_SYMBOL_DIRNAME_OFFSET;
-                symbol->dirname_offset = dirname_offset;
-        }
-
-        return 0;
- error:
-        return -1;
-}
-
-
-
-
-
-
-static int
-read_abbrev_entry (struct dwarf2_lookup_data *data,
-                   uint32_t start,
-                   struct abbrev_attributes *abbrev_attributes,
-                   struct reader *abbrev_reader, 
-                   struct reader *reader)
-{
-        uint64_t abbr_code, tag;
-        uint32_t abbrev_offset;
-        reader->seek (reader, start);
-        abbr_code = reader->read_uleb128 (reader);
-        if (abbr_code == 0) {
-                goto error;
-        }
-        if (abbrev_code_to_abbrev_offset (data, 
-                                          abbr_code, 
-                                          &abbrev_offset,
-                                          abbrev_reader) == -1) {
-                goto error;
-        }
-        abbrev_reader->seek (abbrev_reader, abbrev_offset);
-        abbrev_reader->read_uleb128 (abbrev_reader);
-        
-        tag = abbrev_reader->read_uleb128 (abbrev_reader);
-        abbrev_reader->skip (abbrev_reader, 1);
-        
-        read_attributes (data,
-                         abbrev_attributes, 
-                         abbrev_reader, reader);
-        return 0;
- error:
-        return -1;
-}
-
-
-#endif
