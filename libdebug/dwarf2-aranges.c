@@ -27,7 +27,10 @@
 int 
 dwarf2_aranges_read_all (uint32_t start, 
 			 uint32_t end,
-                         int (*callback) (uint32_t, uint32_t, void *),
+                         int (*callback) (uint32_t cuh_offset, 
+                                          uint32_t start, 
+                                          uint32_t size, 
+                                          void *context),
                          void *data,
 			 struct reader *reader)
 {
@@ -62,7 +65,7 @@ dwarf2_aranges_read_all (uint32_t start,
                         uint32_t tu_delta; /* TARGET_PTR */
                         tu_address = reader->read_u (reader, address_size);
                         tu_delta = reader->read_u (reader, address_size);
-                        if ((*callback) (tu_address, tu_delta, data) == 1) {
+                        if ((*callback) (offset, tu_address, tu_delta, data) == 1) {
                                 goto ok;
                         }
                         cu_current += ADDR_TUPLE_SIZE (address_size);

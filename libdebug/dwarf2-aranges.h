@@ -23,9 +23,19 @@
 
 struct reader;
 
+/**
+ * @start offset from start of file of .debug_aranges section
+ * @end offset from start of file of .debug_aranges section
+ * @callback callback to invoke on each entry. Return 1 to stop iteration.
+ * @data context to pass to callback
+ * @reader reader to read the data
+ */
 int dwarf2_aranges_read_all (uint32_t start, 
                              uint32_t end, 
-                             int (*callback) (uint32_t, uint32_t, void *),
+                             int (*callback) (uint32_t cuh_offset,
+                                              uint32_t start, 
+                                              uint32_t size, 
+                                              void *context),
                              void *data,
                              struct reader *reader);
 
