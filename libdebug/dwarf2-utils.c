@@ -19,6 +19,9 @@
 
 #include "dwarf2-utils.h"
 #include "dwarf2-constants.h"
+#include "reader.h"
+
+#include <stdio.h>
 
 char const *
 dwarf2_utils_tag_to_string (uint64_t tag)
@@ -161,4 +164,17 @@ case DW_AT_##x: \
 #undef FOO
         }
         return str;
+}
+
+void
+dwarf2_utils_print_string (struct reader *reader, uint32_t offset)
+{
+        uint8_t b;
+        reader->seek (reader, offset);
+        do {
+                b = reader->read_u8 (reader);
+                if (b != 0) {
+                        printf ("%c", b);
+                }
+        } while (b != 0);
 }

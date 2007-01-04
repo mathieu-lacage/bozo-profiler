@@ -22,8 +22,11 @@
 
 #include <stdint.h>
 
+struct reader;
+
 char const *dwarf2_utils_attr_name_to_string (uint64_t name);
 char const *dwarf2_utils_tag_to_string (uint64_t tag);
+void dwarf2_utils_print_string (struct reader *reader, uint32_t start);
 
 
 #endif /* DWARF2_UTILS */
