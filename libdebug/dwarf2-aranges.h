@@ -26,7 +26,12 @@ struct reader;
 /**
  * @start offset from start of file of .debug_aranges section
  * @end offset from start of file of .debug_aranges section
- * @callback callback to invoke on each entry. Return 1 to stop iteration.
+ * @callback callback to invoke on each entry. 
+ *           cuh_offset: offset from start of .debug_info section to
+ *                       cuh header
+ *           start: address in virtual address space.
+ *           end: address in virtual address space.
+ *           Return 1 to stop iteration.
  * @data context to pass to callback
  * @reader reader to read the data
  */
