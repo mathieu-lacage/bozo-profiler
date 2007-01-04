@@ -79,8 +79,8 @@ static int
 aranges_cb (uint32_t cuh_offset, uint32_t start, uint32_t size, void *context)
 {
         struct aranges_lookup_data *data = (struct aranges_lookup_data *)context;
-        if (data->target_address > start &&
-            data->target_address <= start + size) {
+        if (data->target_address >= start &&
+            data->target_address < start + size) {
                 data->cuh_offset = cuh_offset;
                 data->found = true;
                 return 1;
@@ -134,8 +134,6 @@ dwarf2_lookup (uint64_t target_address,
         if (!aranges_cb_context.found) {
                 goto error;
         }
-        cuh_start = aranges_cb_context.cuh_offset;
-
 
         if (elf32_parser_read_section_by_name (&elf32, ".debug_info", 
                                                &section_header,
@@ -144,6 +142,7 @@ dwarf2_lookup (uint64_t target_address,
         }
         info_start = section_header.sh_offset;
         info_end = section_header.sh_offset + section_header.sh_size;
+        cuh_start = info_start + aranges_cb_context.cuh_offset;
 
         if (elf32_parser_read_section_by_name (&elf32, ".debug_str", 
                                                &section_header,
