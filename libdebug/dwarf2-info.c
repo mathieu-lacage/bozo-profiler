@@ -274,7 +274,7 @@ dwarf2_info_cuh_read_entry_first (struct dwarf2_info_cuh *cuh,
                                   struct reader *reader)
 {
         dwarf2_info_cuh_read_entry (cuh, entry, 
-                                    cuh->start, end_offset,
+                                    cuh->start + 4 + 2 + 4 + 1, end_offset,
                                     abbrev_reader, reader);
 }
 
@@ -313,6 +313,7 @@ dwarf2_info_read_cuh (struct dwarf2_info *info,
                       uint32_t start /* offset to start of cuh from start of file */,
                       struct reader *reader)
 {
+        /* see section 7.5.1, dw2 */
         reader->seek (reader, start);
         cuh->start = start;
         cuh->info_start = info->info_start;
