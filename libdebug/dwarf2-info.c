@@ -292,10 +292,13 @@ dwarf2_info_cuh_read_entry (struct dwarf2_info_cuh *cuh,
         uint32_t attr_offset;
         struct dwarf2_abbrev_cu *abbrev_cu;
 
+        entry->used = 0;
         abbrev_cu = &cuh->abbrev_cu;
         reader->seek (reader, start_offset);
         abbr_code = reader->read_uleb128 (reader);
         dwarf2_abbrev_cu_read_decl (abbrev_cu, &decl, abbr_code, abbrev_reader);
+        entry->tag = decl.tag;
+        entry->children = decl.children;
         dwarf2_abbrev_decl_read_attr_first (&decl, &attr, &attr_offset, abbrev_reader);
         while (!dwarf2_abbrev_attr_is_last (&attr)) {
                 attr_read_entry (cuh, &attr, entry, reader);
