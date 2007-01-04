@@ -101,5 +101,7 @@ void dwarf2_info_cuh_read_entry (struct dwarf2_info_cuh *header,
 bool dwarf2_info_cuh_entry_is_last (uint32_t offset,
                                     struct reader *reader);
 
+void dwarf2_info_cuh_print_entry (struct dwarf2_info_entry const*entry, struct reader *reader);
+
 
 #endif /* DWARF2_INFO_H */

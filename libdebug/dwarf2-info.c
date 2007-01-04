@@ -21,9 +21,11 @@
 #include "dwarf2-abbrev.h"
 #include "reader.h"
 #include "dwarf2-constants.h"
+#include "dwarf2-utils.h"
 
 #include <assert.h>
 #include <stdbool.h>
+#include <stdio.h>
 
 #define DEBUG(x) do {}while (0)
 
@@ -358,4 +360,37 @@ dwarf2_info_cuh_entry_is_last (uint32_t offset,
                 return true;
         }
         return false;
+}
+
+
+void 
+dwarf2_info_cuh_print_entry (struct dwarf2_info_entry const*entry, struct reader *reader)
+{
+        printf ("TAG=%s\n", dwarf2_utils_tag_to_string (entry->tag));
+        printf ("children=%u\n", entry->children);
+        if (entry->used & DW2_INFO_ATTR_STMT_LIST) {
+                printf ("stmt list=%x\n", entry->stmt_list);
+        }
+        if (entry->used & DW2_INFO_ATTR_NAME_OFFSET) {
+                printf ("name=");
+                dwarf2_utils_print_string (reader, entry->name_offset);
+                printf ("\n");
+        }
+        if (entry->used & DW2_INFO_ATTR_COMP_DIRNAME_OFFSET) {
+                printf ("comp dirname=");
+                dwarf2_utils_print_string (reader, entry->comp_dirname_offset);
+                printf ("\n");
+        }
+        if (entry->used & DW2_INFO_ATTR_HIGH_PC) {
+                printf ("high pc=%llx\n", entry->high_pc);
+        }
+        if (entry->used & DW2_INFO_ATTR_LOW_PC) {
+                printf ("low pc=%llx\n", entry->low_pc);
+        }
+        if (entry->used & DW2_INFO_ATTR_ABSTRACT_ORIGIN) {
+                printf ("abstract origin=%llx\n", entry->abstract_origin);
+        }
+        if (entry->used & DW2_INFO_ATTR_SPECIFICATION) {
+                printf ("specification=%llx\n", entry->specification);
+        }
 }
