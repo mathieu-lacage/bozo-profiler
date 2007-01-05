@@ -70,7 +70,7 @@ ifdef USE_DEBUGGING_LIBC
    -L$(LIBC_INSTALL_DIR) -lc 
  CFLAGS +=-B$(LIBC_INSTALL_DIR) -B$(LIBC_INSTALL_DIR)/lib -gdwarf-2
 else
- CFLAGS +=-gdwarf-2 -O3
+ CFLAGS +=-gdwarf-2 -O0
 endif
 
 LIBDEBUG_TARGET=$(OUTPUT_DIR)/libdebug/libdebug.a
