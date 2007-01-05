@@ -275,6 +275,7 @@ dwarf2_info_cuh_read_entry_first (struct dwarf2_info_cuh *cuh,
                                   struct reader *abbrev_reader,
                                   struct reader *reader)
 {
+        entry->child_level = 0;
         dwarf2_info_cuh_read_entry (cuh, entry, 
                                     cuh->start + 4 + 2 + 4 + 1, end_offset,
                                     abbrev_reader, reader);
@@ -297,10 +298,19 @@ dwarf2_info_cuh_read_entry (struct dwarf2_info_cuh *cuh,
         entry->used = 0;
         abbrev_cu = &cuh->abbrev_cu;
         reader->seek (reader, start_offset);
-        abbr_code = reader->read_uleb128 (reader);
+        while (true) {
+                abbr_code = reader->read_uleb128 (reader);
+                if (abbr_code != 0) {
+                        break;
+                }
+                entry->child_level--;
+        }
         dwarf2_abbrev_cu_read_decl (abbrev_cu, &decl, abbr_code, abbrev_reader);
         entry->tag = decl.tag;
         entry->children = decl.children;
+        if (entry->children) {
+                entry->child_level++;
+        }
         dwarf2_abbrev_decl_read_attr_first (&decl, &attr, &attr_offset, abbrev_reader);
         while (!dwarf2_abbrev_attr_is_last (&attr)) {
                 attr_read_entry (cuh, &attr, entry, reader);
@@ -350,13 +360,14 @@ void dwarf2_info_initialize (struct dwarf2_info *info,
 
 
 bool
-dwarf2_info_cuh_entry_is_last (uint32_t offset,
+dwarf2_info_cuh_entry_is_last (struct dwarf2_info_entry const*entry,
+                               uint32_t offset,
                                struct reader *reader)
 {
         uint32_t abbr_code;
         reader->seek (reader, offset);
         abbr_code = reader->read_uleb128 (reader);
-        if (abbr_code == 0) {
+        if (abbr_code == 0 && entry->child_level == 0) {
                 return true;
         }
         return false;

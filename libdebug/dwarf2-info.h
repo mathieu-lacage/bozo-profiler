@@ -61,9 +61,9 @@ enum dwarf2_info_entry_attr_e {
 
 struct dwarf2_info_entry {
         uint64_t tag;
-        uint8_t children;
-        /* bitfield which specifies which fields below are valid. */
-        int used;
+        uint8_t children;      /* 1 if this entry has children, 0 otherwise. */
+        uint32_t child_level;  /* current level in debug info entry tree */
+        int used;              /* bitfield which specifies which fields below are valid. */
         uint32_t stmt_list;
         uint32_t name_offset;
         uint32_t comp_dirname_offset;
@@ -98,7 +98,8 @@ void dwarf2_info_cuh_read_entry (struct dwarf2_info_cuh *header,
                                  uint32_t *end_offset,
                                  struct reader *abbrev_reader,
                                  struct reader *reader);
-bool dwarf2_info_cuh_entry_is_last (uint32_t offset,
+bool dwarf2_info_cuh_entry_is_last (struct dwarf2_info_entry const*entry,
+                                    uint32_t offset,
                                     struct reader *reader);
 
 void dwarf2_info_cuh_print_entry (struct dwarf2_info_entry const*entry, struct reader *reader);
