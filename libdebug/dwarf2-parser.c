@@ -164,7 +164,7 @@ dwarf2_lookup (uint64_t target_address,
         dwarf2_info_read_cuh (&info, &cuh, cuh_start, reader);
         dwarf2_info_cuh_read_entry_first (&cuh, &cuh_entry, &current, abbrev_reader, reader);
         do {
-                dwarf2_info_cuh_print_entry (&cuh_entry, reader);
+                //dwarf2_info_cuh_print_entry (&cuh_entry, reader);
                 if (cuh_entry.tag == DW_TAG_COMPILE_UNIT) {
                         if (cuh_entry.used & DW2_INFO_ATTR_STMT_LIST) {
                                 found_stmt_list = true;
