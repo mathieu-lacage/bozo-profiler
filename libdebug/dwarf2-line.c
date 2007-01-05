@@ -420,8 +420,7 @@ state_for_address_callback (struct dwarf2_line_machine_state *state,
         } else if (tmp->target_address < state->address) {
                 return 1;
         } else {
-                assert (false);
-                return -1;
+                return 0;
         }
 }
 
