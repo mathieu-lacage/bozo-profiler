@@ -77,9 +77,8 @@ print_symbol (struct dwarf2_symbol_information *symbol, struct reader *reader)
 static uint64_t
 get_caller_pc (void)
 {
-        uint32_t v;
         uint32_t *p;
-        p = &v;
+        p = (uint32_t*)&p;
         return p[2];
 }
 
@@ -122,13 +121,14 @@ test_dwarf2 (int argc, char *argv[])
 
         memory_reader_initialize (&reader, data, size);
         memory_reader_initialize (&abbrev_reader, data, size);
-
+#if 0
         target_address = (uint32_t) dwarf2_lookup;
         if (dwarf2_lookup (target_address, &symbol, READER (&reader), READER (&abbrev_reader)) == -1) {
                 printf ("error dwarf2\n");
                 goto error;
         }
         print_symbol (&symbol, READER (&reader));
+#endif
 
         target_address = get_caller_pc ();
         printf ("target %x\n", target_address);
