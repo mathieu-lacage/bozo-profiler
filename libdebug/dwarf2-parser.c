@@ -164,8 +164,7 @@ dwarf2_lookup (uint64_t target_address,
         dwarf2_info_read_cuh (&info, &cuh, cuh_start, reader);
         dwarf2_info_cuh_read_entry_first (&cuh, &cuh_entry, &current, abbrev_reader, reader);
         do {
-                dwarf2_info_cuh_read_entry (&cuh, &cuh_entry, current, &current, 
-                                            abbrev_reader, reader);
+                dwarf2_info_cuh_print_entry (&cuh_entry, reader);
                 if (cuh_entry.tag == DW_TAG_COMPILE_UNIT) {
                         if (cuh_entry.used & DW2_INFO_ATTR_STMT_LIST) {
                                 found_stmt_list = true;
@@ -175,8 +174,8 @@ dwarf2_lookup (uint64_t target_address,
                                 symbol->valid_fields |= DWARF2_SYMBOL_COMP_DIRNAME_OFFSET;
                                 symbol->comp_dirname_offset = cuh_entry.comp_dirname_offset;
                         }
-                } else if (cuh_entry.used & DW2_INFO_ATTR_HIGH_PC &&
-                           cuh_entry.used & DW2_INFO_ATTR_LOW_PC &&
+                } else if ((cuh_entry.used & DW2_INFO_ATTR_HIGH_PC) &&
+                           (cuh_entry.used & DW2_INFO_ATTR_LOW_PC) &&
                            target_address >= cuh_entry.low_pc &&
                            target_address < cuh_entry.high_pc) {
                         symbol->valid_fields |= DWARF2_SYMBOL_HIGH_PC;
@@ -185,7 +184,9 @@ dwarf2_lookup (uint64_t target_address,
                         symbol->low_pc = cuh_entry.low_pc;
                         goto ok;
                 }
-        } while (!dwarf2_info_cuh_entry_is_last (current, reader));
+                dwarf2_info_cuh_read_entry (&cuh, &cuh_entry, current, &current, 
+                                            abbrev_reader, reader);
+        } while (!dwarf2_info_cuh_entry_is_last (&cuh_entry, current, reader));
 
         return -1;
  ok:
